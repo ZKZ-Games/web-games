@@ -1,4 +1,4 @@
-import { clamp, createCanvas, createInput, createLoop, dist, length, normalize } from "@web-games/kit"
+import { clamp, createCanvas, createInput, createLoop, dist, normalize } from "@web-games/kit"
 
 const parent = document.querySelector("#app")
 if (!(parent instanceof HTMLElement)) throw new Error("missing #app")
@@ -12,9 +12,10 @@ type Mode = "ready" | "fly" | "win"
 const planetR = 74
 const marbleR = 7
 const padR = 15
-const gravity = 16000
+const gravity = 4550000
 const maxLaunch = 440
 const landSpeed = 140
+const padCatch = padR + marbleR + 8
 
 const pads: Pad[] = []
 const stars: { x: number; y: number; a: number }[] = []
@@ -76,11 +77,16 @@ function launch() {
   mode = "fly"
 }
 
+function fallIn() {
+  const n = normalize(view.width / 2 - mx, view.height / 2 - my)
+  return n.x * vx + n.y * vy
+}
+
 function tryLand() {
-  const speed = length(vx, vy)
+  const soft = Math.abs(fallIn())
   for (let i = 0; i < pads.length; i++) {
     const p = padPos(i)
-    if (dist(mx, my, p.x, p.y) < padR + marbleR + 8 && speed < landSpeed) {
+    if (dist(mx, my, p.x, p.y) < padCatch && soft < landSpeed) {
       if (!pads[i].taken) {
         pads[i].taken = true
         score += 1
@@ -95,9 +101,13 @@ function tryLand() {
         message = "orbit complete"
         msgT = 8
       }
-      return
+      return true
     }
   }
+  return false
+}
+
+function crash() {
   message = "too fast"
   msgT = 1.2
   sit(home)
@@ -131,8 +141,25 @@ const loop = createLoop((dt) => {
     my += vy * dt
     trail.push({ x: mx, y: my })
     if (trail.length > 48) trail.shift()
-    if (dist(mx, my, cx, cy) < planetR + marbleR) tryLand()
-    if (mx < -50 || my < -50 || mx > view.width + 50 || my > view.height + 50) {
+    const leftHome = dist(mx, my, padPos(home).x, padPos(home).y) > padCatch + 10
+    if (leftHome) tryLand()
+    if (mode === "fly" && dist(mx, my, cx, cy) < planetR + marbleR) {
+      if (!tryLand()) {
+        const inward = fallIn()
+        if (inward > landSpeed) crash()
+        else {
+          const s = normalize(cx - mx, cy - my)
+          if (inward > 0) {
+            vx -= s.x * inward
+            vy -= s.y * inward
+          }
+          const out = normalize(mx - cx, my - cy)
+          mx = cx + out.x * (planetR + marbleR)
+          my = cy + out.y * (planetR + marbleR)
+        }
+      }
+    }
+    if (mode === "fly" && (mx < -50 || my < -50 || mx > view.width + 50 || my > view.height + 50)) {
       message = "lost to the dark"
       msgT = 1.4
       sit(home)
