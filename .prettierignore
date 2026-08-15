@@ -1,0 +1,5 @@
+node_modules
+dist
+site
+pnpm-lock.yaml
+games/_template

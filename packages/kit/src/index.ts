@@ -1,0 +1,7 @@
+export { createLoop } from "./loop"
+export type { Loop, Tick } from "./loop"
+export { createInput } from "./input"
+export type { Input } from "./input"
+export { createCanvas } from "./canvas"
+export type { CanvasApp } from "./canvas"
+export { clamp, lerp, rand, dist, length, normalize } from "./math"
