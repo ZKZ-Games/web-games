@@ -1,25 +1,45 @@
 import type { CanvasApp } from '@web-games/kit'
 import { clamp } from '@web-games/kit'
 import {
+  type ShopItemId,
+  type ShopKind,
   type State,
+  type UnlockId,
   type UpgradeId,
-  UPGRADES,
   SUB_GOAL,
   canBuy,
+  fmtAud,
   fmtCash,
   fmtInt,
   fmtRate,
   priceOf,
+  unlockAudPerSec,
+  unlockDef,
+  upgradeDef,
+  visibleUnlocks,
+  visibleUpgrades,
 } from './state'
 
 export type Rect = { x: number; y: number; w: number; h: number }
+
+export type ShopRow = {
+  kind: ShopKind
+  id: ShopItemId
+  mystery: boolean
+  row: Rect
+  buy: Rect
+}
 
 export type Layout = {
   hud: Rect
   room: Rect
   shop: Rect
   tap: { x: number; y: number; r: number }
-  rows: { id: UpgradeId; row: Rect; buy: Rect }[]
+  rows: ShopRow[]
+  unlockHead: Rect
+  upgradeHead: Rect | null
+  shopList: Rect
+  shopScrollMax: number
   narrow: boolean
 }
 
@@ -32,11 +52,11 @@ type Fit = {
 const DW = 640
 const DH = 400
 
-export function layout(w: number, h: number): Layout {
+export function layout(w: number, h: number, s: State): Layout {
   const narrow = w < 820 || h < 560
   const hudH = Math.max(58, Math.min(72, h * 0.1))
-  const shopW = narrow ? w : Math.max(236, Math.min(300, w * 0.27))
-  const shopH = narrow ? Math.max(188, Math.min(260, h * 0.34)) : h - hudH
+  const shopW = narrow ? w : Math.max(248, Math.min(312, w * 0.28))
+  const shopH = narrow ? Math.max(200, Math.min(280, h * 0.36)) : h - hudH
   const room: Rect = {
     x: 0,
     y: hudH,
@@ -55,32 +75,94 @@ export function layout(w: number, h: number): Layout {
     y: room.y + room.h - tapR - 28,
     r: tapR,
   }
+
+  const unlocks = visibleUnlocks(s)
+  const upgrades = visibleUpgrades(s)
   const pad = 12
-  const head = 36
-  const rowH = (shop.h - head - pad * 2) / UPGRADES.length
-  const rows = UPGRADES.map((u, i) => {
-    const row = {
+  const titleH = 34
+  const groupH = 22
+  const showUpgrades = upgrades.length > 0
+  const shopList: Rect = {
+    x: shop.x,
+    y: shop.y + titleH,
+    w: shop.w,
+    h: shop.h - titleH,
+  }
+
+  const n = unlocks.length + upgrades.length
+  const extraHeads = showUpgrades ? 2 : 1
+  const available = shopList.h - pad - extraHeads * groupH
+  const rowPitch = clamp(available / Math.max(1, n), 40, 68)
+  const contentH = extraHeads * groupH + n * rowPitch + pad
+  const shopScrollMax = Math.max(0, contentH - shopList.h)
+  s.shopScroll = clamp(s.shopScroll, 0, shopScrollMax)
+  const y0 = shopList.y - s.shopScroll
+
+  const unlockHead: Rect = {
+    x: shop.x + pad,
+    y: y0 + 4,
+    w: shop.w - pad * 2,
+    h: groupH,
+  }
+
+  let y = y0 + groupH
+  const rows: ShopRow[] = []
+  for (const item of unlocks) {
+    rows.push(makeRow('unlock', item.def.id, item.mystery, shop, pad, y, rowPitch))
+    y += rowPitch
+  }
+
+  let upgradeHead: Rect | null = null
+  if (showUpgrades) {
+    upgradeHead = {
       x: shop.x + pad,
-      y: shop.y + head + i * rowH,
+      y: y + 2,
       w: shop.w - pad * 2,
-      h: rowH - 8,
+      h: groupH,
     }
-    const buy = {
-      x: row.x + row.w - 70,
-      y: row.y + row.h * 0.5 - 14,
-      w: 62,
-      h: 28,
+    y += groupH
+    for (const def of upgrades) {
+      rows.push(makeRow('upgrade', def.id, false, shop, pad, y, rowPitch))
+      y += rowPitch
     }
-    return { id: u.id, row, buy }
-  })
+  }
+
   return {
     hud: { x: 0, y: 0, w, h: hudH },
     room,
     shop,
     tap,
     rows,
+    unlockHead,
+    upgradeHead,
+    shopList,
+    shopScrollMax,
     narrow,
   }
+}
+
+function makeRow(
+  kind: ShopKind,
+  id: ShopItemId,
+  mystery: boolean,
+  shop: Rect,
+  pad: number,
+  y: number,
+  rowPitch: number,
+): ShopRow {
+  const row = {
+    x: shop.x + pad,
+    y: y,
+    w: shop.w - pad * 2,
+    h: rowPitch - 8,
+  }
+  const buy = {
+    x: row.x + row.w - 68,
+    y: row.y + row.h * 0.5 - 13,
+    w: 58,
+    h: 26,
+  }
+  return { kind, id, mystery, row, buy }
 }
 
 function fitOf(room: Rect): Fit {
@@ -386,7 +468,12 @@ function drawDesk(ctx: CanvasRenderingContext2D, f: Fit, s: State) {
   ctx.beginPath()
   ctx.arc(f.x(272), f.y(232), f.u(7), 0, Math.PI * 2)
   ctx.fill()
-  ctx.fillStyle = s.rec > 0 ? `rgba(255,40,40,${0.45 + s.rec * 0.55})` : '#5a2020'
+  const camOn = s.owned.webcam > 0
+  ctx.fillStyle = camOn
+    ? `rgba(80,180,255,${0.45 + s.rec * 0.4})`
+    : s.rec > 0
+      ? `rgba(255,40,40,${0.45 + s.rec * 0.55})`
+      : '#5a2020'
   ctx.beginPath()
   ctx.arc(f.x(272), f.y(232), f.u(3.2), 0, Math.PI * 2)
   ctx.fill()
@@ -585,7 +672,7 @@ function drawPerson(ctx: CanvasRenderingContext2D, f: Fit, s: State, t: number) 
 }
 
 function drawIdeas(ctx: CanvasRenderingContext2D, f: Fit, s: State) {
-  const n = 1 + Math.min(3, s.owned.concept)
+  const n = 1 + Math.min(3, s.owned.thumbnail)
   for (let i = 0; i < n; i++) {
     fillRr(
       ctx,
@@ -600,7 +687,7 @@ function drawIdeas(ctx: CanvasRenderingContext2D, f: Fit, s: State) {
   ctx.fillStyle = '#3a2a10'
   ctx.font = `800 ${f.u(7)}px ui-sans-serif`
   ctx.textAlign = 'left'
-  ctx.fillText('IDEAS', f.x(34), f.y(116))
+  ctx.fillText(s.owned.thumbnail > 0 ? 'THUMBS' : 'IDEAS', f.x(34), f.y(116))
   ctx.font = `700 ${f.u(5.5)}px ui-sans-serif`
   ctx.fillText('Gameplay', f.x(34), f.y(128))
   ctx.fillText('Skits', f.x(34), f.y(136))
@@ -660,80 +747,245 @@ function drawShop(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   ctx.font = '800 15px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillText('UPGRADES', shop.x + 16, shop.y + 24)
+  ctx.fillText('SHOP', shop.x + 16, shop.y + 24)
   ctx.fillStyle = '#f0c14b'
   ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'
   ctx.fillText('Bedroom Era', shop.x + 108, shop.y + 24)
 
-  for (const row of L.rows) {
-    const def = UPGRADES.find((u) => u.id === row.id)!
-    const price = priceOf(def, s.owned[row.id])
-    const ok = canBuy(s, row.id)
-    const { x, y, w, h } = row.row
-    fillRr(ctx, x, y, w, h, 10, ok ? '#243868' : '#18243c')
-    if (ok) {
-      ctx.strokeStyle = 'rgba(240,193,75,0.55)'
-      ctx.lineWidth = 1.5
-      rr(ctx, x, y, w, h, 10)
-      ctx.stroke()
-    }
-    drawUpgradeIcon(ctx, x + 18, y + h / 2, row.id, s)
-    ctx.fillStyle = '#f4efe6'
-    ctx.font = '800 14px ui-sans-serif, system-ui, sans-serif'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'alphabetic'
-    const count = s.owned[row.id] > 0 ? `  ×${s.owned[row.id]}` : ''
-    ctx.fillText(def.name + count, x + 40, y + 18)
-    ctx.fillStyle = '#9aa8c8'
-    ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'
-    ctx.fillText(fmtCash(price) + ' · ' + def.hint, x + 40, y + 34)
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(L.shopList.x, L.shopList.y, L.shopList.w, L.shopList.h)
+  ctx.clip()
 
-    const b = row.buy
-    fillRr(ctx, b.x, b.y, b.w, b.h, 7, ok ? '#2f9e58' : '#3a4458')
-    ctx.fillStyle = ok ? '#f4fff4' : '#8a93a4'
-    ctx.font = '800 12px ui-sans-serif, system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('BUY', b.x + b.w / 2, b.y + b.h / 2)
+  ctx.fillStyle = '#8aa0c8'
+  ctx.font = '800 10px ui-sans-serif, system-ui, sans-serif'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('UNLOCKS', L.unlockHead.x + 2, L.unlockHead.y + L.unlockHead.h / 2)
+
+  if (L.upgradeHead) {
+    ctx.fillText('UPGRADES', L.upgradeHead.x + 2, L.upgradeHead.y + L.upgradeHead.h / 2)
+  }
+
+  for (const row of L.rows) {
+    drawShopRow(ctx, s, row)
+  }
+
+  ctx.restore()
+
+  if (L.shopScrollMax > 0) {
+    const trackH = L.shopList.h - 16
+    const thumbH = Math.max(18, trackH * (L.shopList.h / (L.shopList.h + L.shopScrollMax)))
+    const t = L.shopScrollMax > 0 ? s.shopScroll / L.shopScrollMax : 0
+    fillRr(
+      ctx,
+      shop.x + shop.w - 7,
+      L.shopList.y + 8 + t * (trackH - thumbH),
+      4,
+      thumbH,
+      2,
+      'rgba(255,255,255,0.28)',
+    )
   }
 }
 
-function drawUpgradeIcon(
+function drawShopRow(ctx: CanvasRenderingContext2D, s: State, row: ShopRow) {
+  const { x, y, w, h } = row.row
+  const ok = !row.mystery && canBuy(s, row.kind, row.id)
+  fillRr(ctx, x, y, w, h, 10, row.mystery ? '#151c2e' : ok ? '#243868' : '#18243c')
+  if (ok) {
+    ctx.strokeStyle = 'rgba(240,193,75,0.55)'
+    ctx.lineWidth = 1.5
+    rr(ctx, x, y, w, h, 10)
+    ctx.stroke()
+  }
+
+  const nameY = y + Math.max(16, h * 0.42)
+  const hintY = y + Math.max(30, h * 0.72)
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+
+  if (row.mystery) {
+    drawMysteryIcon(ctx, x + 18, y + h / 2)
+    ctx.fillStyle = '#6e7c96'
+    ctx.font = '800 14px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText('???', x + 40, nameY)
+    ctx.fillStyle = '#4d5a72'
+    ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText('???', x + 40, hintY)
+    return
+  }
+
+  if (row.kind === 'unlock') {
+    const def = unlockDef(row.id as UnlockId)!
+    const owned = s.owned[def.id]
+    const price = priceOf(def, owned)
+    const each = unlockAudPerSec(s, def.id)
+    drawUnlockIcon(ctx, x + 18, y + h / 2, def.id, s)
+    ctx.fillStyle = '#f4efe6'
+    ctx.font = '800 13px ui-sans-serif, system-ui, sans-serif'
+    const count = owned > 0 ? `  ×${owned}` : ''
+    ctx.fillText(def.name + count, x + 40, nameY)
+    ctx.fillStyle = '#9aa8c8'
+    ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText(fmtCash(price) + ' · ' + fmtAud(each), x + 40, hintY)
+  } else {
+    const def = upgradeDef(row.id as UpgradeId)!
+    drawUpgradeIcon(ctx, x + 18, y + h / 2, def.id)
+    ctx.fillStyle = '#f4efe6'
+    ctx.font = '800 13px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText(def.name, x + 40, nameY)
+    ctx.fillStyle = '#9aa8c8'
+    ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText(fmtCash(def.cost) + ' · ' + def.hint, x + 40, hintY)
+  }
+
+  const b = row.buy
+  fillRr(ctx, b.x, b.y, b.w, b.h, 7, ok ? '#2f9e58' : '#3a4458')
+  ctx.fillStyle = ok ? '#f4fff4' : '#8a93a4'
+  ctx.font = '800 12px ui-sans-serif, system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('BUY', b.x + b.w / 2, b.y + b.h / 2)
+}
+
+function drawMysteryIcon(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.fillStyle = '#2a3348'
+  ctx.beginPath()
+  ctx.arc(x, y, 9, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#6e7c96'
+  ctx.font = '800 11px ui-sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('?', x, y + 0.5)
+}
+
+function drawUnlockIcon(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  id: UpgradeId,
+  id: UnlockId,
   s: State,
 ) {
-  if (id === 'concept') {
-    ctx.fillStyle = '#f3d34a'
+  if (id === 'webcam') {
+    fillRr(ctx, x - 8, y - 6, 16, 11, 2, s.owned.webcam ? '#4aa3e8' : '#8aa0b8')
+    ctx.fillStyle = '#12202e'
     ctx.beginPath()
-    ctx.arc(x, y, 9, 0, Math.PI * 2)
+    ctx.arc(x, y, 3.2, 0, Math.PI * 2)
     ctx.fill()
-    ctx.fillStyle = '#5a3a10'
-    ctx.font = '800 10px ui-sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('?', x, y + 0.5)
+    ctx.fillStyle = s.owned.webcam ? '#4aa3e8' : '#8aa0b8'
+    ctx.fillRect(x + 6, y - 2, 5, 4)
   } else if (id === 'ring') {
     ctx.strokeStyle = s.owned.ring ? '#ffe27a' : '#c8c0a8'
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.arc(x, y, 8, 0, Math.PI * 2)
     ctx.stroke()
-  } else if (id === 'viral') {
-    ctx.fillStyle = '#ff7a18'
-    ctx.font = '800 16px ui-sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('🔥', x, y + 1)
-  } else {
+  } else if (id === 'mic') {
     ctx.fillStyle = '#1a1a1e'
     ctx.beginPath()
     ctx.ellipse(x, y - 2, 5, 7, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#555'
     ctx.fillRect(x - 1.5, y + 4, 3, 6)
+  } else if (id === 'thumbnail') {
+    fillRr(ctx, x - 9, y - 7, 18, 14, 2, '#2a2e38')
+    ctx.fillStyle = '#e23d3d'
+    ctx.beginPath()
+    ctx.moveTo(x - 3, y - 4)
+    ctx.lineTo(x - 3, y + 4)
+    ctx.lineTo(x + 5, y)
+    ctx.closePath()
+    ctx.fill()
+  } else {
+    ctx.fillStyle = '#ff7a18'
+    ctx.font = '800 16px ui-sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('🔥', x, y + 1)
+  }
+}
+
+function drawUpgradeIcon(ctx: CanvasRenderingContext2D, x: number, y: number, id: UpgradeId) {
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  if (id === 'autofocus') {
+    ctx.strokeStyle = '#8ad4ff'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(x, y, 6, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(x, y, 2, 0, Math.PI * 2)
+    ctx.stroke()
+  } else if (id === 'fasterTakes') {
+    ctx.fillStyle = '#f0c14b'
+    ctx.beginPath()
+    ctx.moveTo(x - 3, y - 8)
+    ctx.lineTo(x + 5, y - 1)
+    ctx.lineTo(x + 0.5, y - 1)
+    ctx.lineTo(x + 4, y + 8)
+    ctx.lineTo(x - 5, y + 1)
+    ctx.lineTo(x - 0.5, y + 1)
+    ctx.closePath()
+    ctx.fill()
+  } else if (id === 'catchlight') {
+    ctx.strokeStyle = '#ffe27a'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(x, y, 7, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.fillStyle = '#fff4c8'
+    ctx.beginPath()
+    ctx.arc(x + 3, y - 3, 2, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (id === 'nightStream') {
+    ctx.fillStyle = '#7aa0e8'
+    ctx.beginPath()
+    ctx.arc(x, y, 7, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#1b2a4a'
+    ctx.beginPath()
+    ctx.arc(x + 3, y - 1, 5.5, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (id === 'popFilter') {
+    ctx.strokeStyle = '#c8d0dc'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(x, y, 7, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.fillStyle = '#1a1a1e'
+    ctx.beginPath()
+    ctx.ellipse(x, y, 3, 4.5, 0, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (id === 'loudTakes') {
+    ctx.fillStyle = '#e8eefc'
+    ctx.beginPath()
+    ctx.moveTo(x - 6, y - 3)
+    ctx.lineTo(x - 2, y - 3)
+    ctx.lineTo(x + 3, y - 7)
+    ctx.lineTo(x + 3, y + 7)
+    ctx.lineTo(x - 2, y + 3)
+    ctx.lineTo(x - 6, y + 3)
+    ctx.closePath()
+    ctx.fill()
+  } else if (id === 'redArrow') {
+    ctx.fillStyle = '#e23d3d'
+    ctx.beginPath()
+    ctx.moveTo(x - 2, y + 7)
+    ctx.lineTo(x - 2, y - 2)
+    ctx.lineTo(x - 7, y - 2)
+    ctx.lineTo(x + 2, y - 9)
+    ctx.lineTo(x + 8, y - 2)
+    ctx.lineTo(x + 3, y - 2)
+    ctx.lineTo(x + 3, y + 7)
+    ctx.closePath()
+    ctx.fill()
+  } else {
+    ctx.fillStyle = '#ff7a18'
+    ctx.font = '800 11px ui-sans-serif'
+    ctx.fillText('#', x, y + 1)
   }
 }
 

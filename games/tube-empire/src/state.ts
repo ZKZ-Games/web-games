@@ -2,56 +2,125 @@ import { clamp } from '@web-games/kit'
 
 export const SUB_GOAL = 1000
 
-export type UpgradeId = 'concept' | 'ring' | 'viral' | 'mic'
+export type UnlockId = 'webcam' | 'ring' | 'mic' | 'thumbnail' | 'viral'
+
+export type UpgradeId =
+  | 'autofocus'
+  | 'fasterTakes'
+  | 'catchlight'
+  | 'nightStream'
+  | 'popFilter'
+  | 'loudTakes'
+  | 'redArrow'
+  | 'trendingTag'
+
+export type ShopKind = 'unlock' | 'upgrade'
+export type ShopItemId = UnlockId | UpgradeId
+
+export type UnlockDef = {
+  id: UnlockId
+  name: string
+  cost: number
+  audPerSec: number
+}
 
 export type UpgradeDef = {
   id: UpgradeId
+  unlockId: UnlockId
   name: string
   hint: string
   cost: number
-  power: number
-  audience: number
+  kind: 'generator' | 'tapAudience' | 'tap'
+  mult: number
 }
+
+export const UNLOCKS: UnlockDef[] = [
+  { id: 'webcam', name: 'Cheap webcam', cost: 4, audPerSec: 0.08 },
+  { id: 'ring', name: 'Ring light', cost: 18, audPerSec: 0.25 },
+  { id: 'mic', name: 'USB mic', cost: 55, audPerSec: 0.7 },
+  { id: 'thumbnail', name: 'Thumbnail kit', cost: 160, audPerSec: 2 },
+  { id: 'viral', name: 'Viral moment', cost: 480, audPerSec: 6 },
+]
 
 export const UPGRADES: UpgradeDef[] = [
   {
-    id: 'concept',
-    name: 'Concept',
-    hint: 'sharper ideas',
-    cost: 5,
-    power: 0.45,
-    audience: 0.015,
+    id: 'autofocus',
+    unlockId: 'webcam',
+    name: 'Autofocus',
+    hint: 'webcam aud/s ×1.5',
+    cost: 12,
+    kind: 'generator',
+    mult: 1.5,
   },
   {
-    id: 'ring',
-    name: 'Ring Light',
-    hint: 'face light',
-    cost: 15,
-    power: 0.55,
-    audience: 0.02,
+    id: 'fasterTakes',
+    unlockId: 'webcam',
+    name: 'Faster takes',
+    hint: 'tap audience +50%',
+    cost: 20,
+    kind: 'tapAudience',
+    mult: 1.5,
   },
   {
-    id: 'viral',
-    name: 'Viral clip',
-    hint: 'harder ticks',
-    cost: 25,
-    power: 0.95,
-    audience: 0.07,
+    id: 'catchlight',
+    unlockId: 'ring',
+    name: 'Catchlight',
+    hint: 'ring aud/s ×1.5',
+    cost: 30,
+    kind: 'generator',
+    mult: 1.5,
   },
   {
-    id: 'mic',
-    name: 'USB Mic',
-    hint: 'clear voice',
-    cost: 25,
-    power: 0.65,
-    audience: 0.03,
+    id: 'nightStream',
+    unlockId: 'ring',
+    name: 'Night stream',
+    hint: 'tap +25%',
+    cost: 45,
+    kind: 'tap',
+    mult: 1.25,
+  },
+  {
+    id: 'popFilter',
+    unlockId: 'mic',
+    name: 'Pop filter',
+    hint: 'mic aud/s ×1.5',
+    cost: 80,
+    kind: 'generator',
+    mult: 1.5,
+  },
+  {
+    id: 'loudTakes',
+    unlockId: 'mic',
+    name: 'Loud takes',
+    hint: 'tap +50%',
+    cost: 120,
+    kind: 'tap',
+    mult: 1.5,
+  },
+  {
+    id: 'redArrow',
+    unlockId: 'thumbnail',
+    name: 'Red arrow',
+    hint: 'thumbnail aud/s ×2',
+    cost: 200,
+    kind: 'generator',
+    mult: 2,
+  },
+  {
+    id: 'trendingTag',
+    unlockId: 'viral',
+    name: 'Trending tag',
+    hint: 'viral aud/s ×2',
+    cost: 600,
+    kind: 'generator',
+    mult: 2,
   },
 ]
 
 const BASE_VIEWS = 1
 const BASE_AUDIENCE = 0.012
 const BASE_CASH = 0.21
-const PRICE_GROWTH = 1.48
+const UNLOCK_GROWTH = 1.15
 
 export type Act = 'talk' | 'record' | 'clip'
 
@@ -80,7 +149,8 @@ export type State = {
   cash: number
   subs: number
   audience: number
-  owned: Record<UpgradeId, number>
+  owned: Record<UnlockId, number>
+  bought: Record<UpgradeId, boolean>
   act: Act
   bounce: number
   rec: number
@@ -94,9 +164,27 @@ export type State = {
   floaters: Floater[]
   bits: Bit[]
   ripples: { r: number; a: number }[]
+  shopScroll: number
 }
 
 const ACTS: Act[] = ['talk', 'record', 'clip']
+
+function emptyOwned(): Record<UnlockId, number> {
+  return { webcam: 0, ring: 0, mic: 0, thumbnail: 0, viral: 0 }
+}
+
+function emptyBought(): Record<UpgradeId, boolean> {
+  return {
+    autofocus: false,
+    fasterTakes: false,
+    catchlight: false,
+    nightStream: false,
+    popFilter: false,
+    loudTakes: false,
+    redArrow: false,
+    trendingTag: false,
+  }
+}
 
 export function createState(): State {
   return {
@@ -104,7 +192,8 @@ export function createState(): State {
     cash: 0,
     subs: 0,
     audience: 0,
-    owned: { concept: 0, ring: 0, viral: 0, mic: 0 },
+    owned: emptyOwned(),
+    bought: emptyBought(),
     act: 'talk',
     bounce: 0,
     rec: 0,
@@ -118,17 +207,85 @@ export function createState(): State {
     floaters: [],
     bits: [],
     ripples: [],
+    shopScroll: 0,
   }
 }
 
-export function tapPower(s: State): number {
-  let p = 1
-  for (const u of UPGRADES) p += s.owned[u.id] * u.power
-  return p
+export function unlockDef(id: UnlockId): UnlockDef | undefined {
+  return UNLOCKS.find((u) => u.id === id)
 }
 
-export function priceOf(def: UpgradeDef, owned: number): number {
-  return Math.round(def.cost * PRICE_GROWTH ** owned * 100) / 100
+export function upgradeDef(id: UpgradeId): UpgradeDef | undefined {
+  return UPGRADES.find((u) => u.id === id)
+}
+
+export function isUnlockId(id: ShopItemId): id is UnlockId {
+  return UNLOCKS.some((u) => u.id === id)
+}
+
+export function unlockRevealed(s: State, id: UnlockId): boolean {
+  const i = UNLOCKS.findIndex((u) => u.id === id)
+  if (i <= 0) return true
+  return s.owned[UNLOCKS[i - 1].id] >= 1
+}
+
+export function visibleUnlocks(s: State): { def: UnlockDef; mystery: boolean }[] {
+  const rows: { def: UnlockDef; mystery: boolean }[] = []
+  for (const def of UNLOCKS) {
+    if (unlockRevealed(s, def.id)) {
+      rows.push({ def, mystery: false })
+    } else {
+      rows.push({ def, mystery: true })
+      break
+    }
+  }
+  return rows
+}
+
+export function visibleUpgrades(s: State): UpgradeDef[] {
+  return UPGRADES.filter((u) => s.owned[u.unlockId] >= 1 && !s.bought[u.id])
+}
+
+export function unlockMul(s: State, id: UnlockId): number {
+  let mul = 1
+  for (const u of UPGRADES) {
+    if (u.unlockId === id && u.kind === 'generator' && s.bought[u.id]) mul *= u.mult
+  }
+  return mul
+}
+
+export function unlockAudPerSec(s: State, id: UnlockId): number {
+  const def = unlockDef(id)
+  if (!def) return 0
+  return def.audPerSec * unlockMul(s, id)
+}
+
+export function audiencePerSec(s: State): number {
+  let rate = 0
+  for (const def of UNLOCKS) {
+    rate += s.owned[def.id] * unlockAudPerSec(s, def.id)
+  }
+  return rate
+}
+
+function tapMults(s: State): { views: number; audience: number; cash: number } {
+  let views = 1
+  let audience = 1
+  let cash = 1
+  for (const u of UPGRADES) {
+    if (!s.bought[u.id]) continue
+    if (u.kind === 'tapAudience') audience *= u.mult
+    if (u.kind === 'tap') {
+      views *= u.mult
+      audience *= u.mult
+      cash *= u.mult
+    }
+  }
+  return { views, audience, cash }
+}
+
+export function priceOf(def: UnlockDef, owned: number): number {
+  return Math.round(def.cost * UNLOCK_GROWTH ** owned * 100) / 100
 }
 
 export function fmtInt(n: number): string {
@@ -148,6 +305,13 @@ export function fmtRate(n: number): string {
   return '$' + n.toFixed(2) + '/sec'
 }
 
+export function fmtAud(n: number): string {
+  const rounded = Math.round(n * 1000) / 1000
+  if (Number.isInteger(rounded)) return rounded + ' aud/s'
+  const text = rounded.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')
+  return text + ' aud/s'
+}
+
 function refreshSubs(s: State) {
   const raw = s.views * 0.42 + s.audience * 52
   const next = clamp(Math.floor(raw), 0, SUB_GOAL)
@@ -159,14 +323,14 @@ function refreshSubs(s: State) {
 }
 
 export function tap(s: State, originX: number, originY: number): number {
-  const p = tapPower(s)
-  const views = BASE_VIEWS * p
+  const m = tapMults(s)
+  const views = BASE_VIEWS * m.views
   s.views += views
-  s.audience += BASE_AUDIENCE * p
-  s.cash += BASE_CASH * p
+  s.audience += BASE_AUDIENCE * m.audience
+  s.cash += BASE_CASH * m.cash
   refreshSubs(s)
 
-  s.act = ACTS[Math.floor(s.views / p) % ACTS.length]
+  s.act = ACTS[Math.floor(s.views) % ACTS.length]
   s.bounce = 1
   s.tapPulse = 1
   s.rec = s.act === 'record' ? 1.15 : 0.55
@@ -200,20 +364,45 @@ export function tap(s: State, originX: number, originY: number): number {
   return gained
 }
 
-export function buy(s: State, id: UpgradeId): boolean {
-  const def = UPGRADES.find((u) => u.id === id)
+export function buy(s: State, kind: ShopKind, id: ShopItemId): boolean {
+  if (kind === 'unlock') {
+    if (!isUnlockId(id)) return false
+    const def = unlockDef(id)
+    if (!def || !unlockRevealed(s, id)) return false
+    const price = priceOf(def, s.owned[id])
+    if (s.cash < price) return false
+    s.cash -= price
+    s.owned[id] += 1
+    refreshSubs(s)
+    return true
+  }
+
+  const def = upgradeDef(id as UpgradeId)
   if (!def) return false
-  const price = priceOf(def, s.owned[id])
-  if (s.cash < price) return false
-  s.cash -= price
-  s.owned[id] += 1
-  s.audience += def.audience
+  if (s.bought[def.id] || s.owned[def.unlockId] < 1) return false
+  if (s.cash < def.cost) return false
+  s.cash -= def.cost
+  s.bought[def.id] = true
   refreshSubs(s)
   return true
 }
 
+export function canBuy(s: State, kind: ShopKind, id: ShopItemId): boolean {
+  if (kind === 'unlock') {
+    if (!isUnlockId(id)) return false
+    const def = unlockDef(id)
+    if (!def || !unlockRevealed(s, id)) return false
+    return s.cash >= priceOf(def, s.owned[id])
+  }
+  const def = upgradeDef(id as UpgradeId)
+  if (!def) return false
+  if (s.bought[def.id] || s.owned[def.unlockId] < 1) return false
+  return s.cash >= def.cost
+}
+
 export function tick(s: State, dt: number) {
   s.time += dt
+  s.audience += audiencePerSec(s) * dt
   s.cash += s.audience * dt
   refreshSubs(s)
 
@@ -265,10 +454,4 @@ export function tick(s: State, dt: number) {
       })
     }
   }
-}
-
-export function canBuy(s: State, id: UpgradeId): boolean {
-  const def = UPGRADES.find((u) => u.id === id)
-  if (!def) return false
-  return s.cash >= priceOf(def, s.owned[id])
 }
