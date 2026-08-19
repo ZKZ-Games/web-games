@@ -20,7 +20,7 @@ const loop = createLoop((dt) => {
   if (input.keyPressed('Space')) doTap()
   if (input.pointer.pressed) {
     const { x, y } = input.pointer
-    const row = L.rows.find((r) => hitRect(r.buy, x, y) || hitRect(r.row, x, y))
+    const row = L.rows.find((r) => hitRect(r.buy, x, y))
     if (row) buy(state, row.id)
     else if (hitTap(L, x, y) || hitRect(L.room, x, y)) doTap()
   }

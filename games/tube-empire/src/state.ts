@@ -136,7 +136,11 @@ export function fmtInt(n: number): string {
 }
 
 export function fmtCash(n: number): string {
-  if (n < 100) return '$' + n.toFixed(2)
+  if (n < 100) {
+    const cents = Math.round(n * 100)
+    if (cents % 100 === 0) return '$' + cents / 100
+    return '$' + (cents / 100).toFixed(2)
+  }
   return '$' + Math.floor(n).toLocaleString('en-US')
 }
 
