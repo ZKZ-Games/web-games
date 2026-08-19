@@ -2,9 +2,9 @@
 
 A tiny studio kit for one-screen canvas games.
 
-
 Orbit is the first game: hold, aim, release, land on pads.
 
+TubeEmpire is the bedroom tap-clicker: mash TAP, buy cheap gear, hit 1,000 subs.
 
 ## Setup
 
@@ -16,12 +16,13 @@ pnpm dev launches Orbit (the playground). Hold to charge, aim with the pointer, 
 
 Same thing: pnpm --filter playground dev
 
+Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy a Concept, grow to 1,000 subs.
+
 ## New title
 
 pnpm new-game my-title
 
 Copies games/_template to games/my-title and rewrites the name. Then pnpm --filter my-title dev
-
 
 ## Kit
 
@@ -46,4 +47,3 @@ Draw with canvas. No asset pipeline yet.
 ## CI
 
 Pushes and PRs run lint, typecheck, and build on Node 22. Merges to main also build a Pages artifact (an index of every game dist). See docs/PIPELINE.md.
-
