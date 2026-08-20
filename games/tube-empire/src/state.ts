@@ -2,17 +2,22 @@ import { clamp } from '@web-games/kit'
 
 export const SUB_GOAL = 1000
 
-export type UnlockId = 'webcam' | 'ring' | 'mic' | 'thumbnail' | 'viral'
+export type UnlockId =
+  | 'personality'
+  | 'editing'
+  | 'thumbnail'
+  | 'hooks'
+  | 'catchphrases'
 
 export type UpgradeId =
-  | 'autofocus'
-  | 'fasterTakes'
-  | 'catchlight'
-  | 'nightStream'
-  | 'popFilter'
-  | 'loudTakes'
+  | 'catchphrase'
+  | 'deadpan'
+  | 'jumpCuts'
+  | 'smashZoom'
   | 'redArrow'
-  | 'trendingTag'
+  | 'shockFace'
+  | 'coldOpen'
+  | 'introSting'
 
 export type ShopKind = 'unlock' | 'upgrade'
 export type ShopItemId = UnlockId | UpgradeId
@@ -30,91 +35,124 @@ export type UpgradeDef = {
   name: string
   hint: string
   cost: number
-  kind: 'generator' | 'tapAudience' | 'tap'
+  kind: 'generator' | 'tap'
   mult: number
+  lines?: boolean
 }
 
 export const UNLOCKS: UnlockDef[] = [
-  { id: 'webcam', name: 'Cheap webcam', cost: 4, audPerSec: 0.08 },
-  { id: 'ring', name: 'Ring light', cost: 18, audPerSec: 0.25 },
-  { id: 'mic', name: 'USB mic', cost: 55, audPerSec: 0.7 },
-  { id: 'thumbnail', name: 'Thumbnail kit', cost: 160, audPerSec: 2 },
-  { id: 'viral', name: 'Viral moment', cost: 480, audPerSec: 6 },
+  { id: 'personality', name: 'Personality', cost: 4, audPerSec: 0.08 },
+  { id: 'editing', name: 'Editing', cost: 18, audPerSec: 0.25 },
+  { id: 'thumbnail', name: 'Thumbnail design', cost: 55, audPerSec: 0.7 },
+  { id: 'hooks', name: 'Hooks', cost: 160, audPerSec: 2 },
+  { id: 'catchphrases', name: 'Catchphrases', cost: 480, audPerSec: 6 },
 ]
 
 export const UPGRADES: UpgradeDef[] = [
   {
-    id: 'autofocus',
-    unlockId: 'webcam',
-    name: 'Autofocus',
-    hint: 'webcam aud/s ×1.5',
+    id: 'catchphrase',
+    unlockId: 'personality',
+    name: 'Catchphrase',
+    hint: 'personality aud/s ×1.5 + lines',
     cost: 12,
     kind: 'generator',
     mult: 1.5,
+    lines: true,
   },
   {
-    id: 'fasterTakes',
-    unlockId: 'webcam',
-    name: 'Faster takes',
-    hint: 'tap audience +50%',
+    id: 'deadpan',
+    unlockId: 'personality',
+    name: 'Deadpan',
+    hint: 'tap +50%',
     cost: 20,
-    kind: 'tapAudience',
+    kind: 'tap',
     mult: 1.5,
   },
   {
-    id: 'catchlight',
-    unlockId: 'ring',
-    name: 'Catchlight',
-    hint: 'ring aud/s ×1.5',
+    id: 'jumpCuts',
+    unlockId: 'editing',
+    name: 'Jump cuts',
+    hint: 'editing aud/s ×1.5',
     cost: 30,
     kind: 'generator',
     mult: 1.5,
   },
   {
-    id: 'nightStream',
-    unlockId: 'ring',
-    name: 'Night stream',
+    id: 'smashZoom',
+    unlockId: 'editing',
+    name: 'Smash zoom',
     hint: 'tap +25%',
     cost: 45,
     kind: 'tap',
     mult: 1.25,
   },
   {
-    id: 'popFilter',
-    unlockId: 'mic',
-    name: 'Pop filter',
-    hint: 'mic aud/s ×1.5',
+    id: 'redArrow',
+    unlockId: 'thumbnail',
+    name: 'Red arrow',
+    hint: 'thumb aud/s ×1.5',
     cost: 80,
     kind: 'generator',
     mult: 1.5,
   },
   {
-    id: 'loudTakes',
-    unlockId: 'mic',
-    name: 'Loud takes',
+    id: 'shockFace',
+    unlockId: 'thumbnail',
+    name: 'Shock face',
     hint: 'tap +50%',
     cost: 120,
     kind: 'tap',
     mult: 1.5,
   },
   {
-    id: 'redArrow',
-    unlockId: 'thumbnail',
-    name: 'Red arrow',
-    hint: 'thumbnail aud/s ×2',
+    id: 'coldOpen',
+    unlockId: 'hooks',
+    name: 'Cold open',
+    hint: 'hooks aud/s ×2',
     cost: 200,
     kind: 'generator',
     mult: 2,
   },
   {
-    id: 'trendingTag',
-    unlockId: 'viral',
-    name: 'Trending tag',
-    hint: 'viral aud/s ×2',
+    id: 'introSting',
+    unlockId: 'catchphrases',
+    name: 'Intro sting',
+    hint: 'catchphrase aud/s ×2 + lines',
     cost: 600,
     kind: 'generator',
     mult: 2,
+    lines: true,
   },
+]
+
+export const BOOT_LINES = [
+  "Wait, we're live?",
+  "Like and subscribe. I'm not above it.",
+  'The algorithm owes me.',
+  'One more take. This is the one.',
+  "Don't look at the sub count.",
+  'Thumbnail face in 3, 2—',
+  'Is this even a concept?',
+  'Chat, I can explain.',
+  'Okay chat, stay with me.',
+  "Don't skip. I see you.",
+  'This intro is getting rewritten.',
+]
+
+export const CATCHPHRASE_LINES = [
+  "That's the bit. That's always the bit.",
+  "You already know what I'm gonna say.",
+  "Hit the bell. I'm not proud.",
+  "We're so back. Again.",
+  'Comment your conspiracy.',
+]
+
+export const INTRO_STING_LINES = [
+  'DUN-dun. Welcome back.',
+  'Theme song in my head only.',
+  "Smash that— okay I'll stop.",
+  'Previously on this channel: chaos.',
+  "Intro's 4 seconds. Respect it.",
 ]
 
 const BASE_VIEWS = 1
@@ -144,6 +182,13 @@ export type Bit = {
   kind: 'clip' | 'star'
 }
 
+export type Bubble = {
+  text: string
+  life: number
+  max: number
+  pulse: number
+}
+
 export type State = {
   views: number
   cash: number
@@ -165,24 +210,33 @@ export type State = {
   bits: Bit[]
   ripples: { r: number; a: number }[]
   shopScroll: number
+  bubble: Bubble | null
+  lineBag: string[]
+  lastLine: string
 }
 
 const ACTS: Act[] = ['talk', 'record', 'clip']
 
 function emptyOwned(): Record<UnlockId, number> {
-  return { webcam: 0, ring: 0, mic: 0, thumbnail: 0, viral: 0 }
+  return {
+    personality: 0,
+    editing: 0,
+    thumbnail: 0,
+    hooks: 0,
+    catchphrases: 0,
+  }
 }
 
 function emptyBought(): Record<UpgradeId, boolean> {
   return {
-    autofocus: false,
-    fasterTakes: false,
-    catchlight: false,
-    nightStream: false,
-    popFilter: false,
-    loudTakes: false,
+    catchphrase: false,
+    deadpan: false,
+    jumpCuts: false,
+    smashZoom: false,
     redArrow: false,
-    trendingTag: false,
+    shockFace: false,
+    coldOpen: false,
+    introSting: false,
   }
 }
 
@@ -208,6 +262,9 @@ export function createState(): State {
     bits: [],
     ripples: [],
     shopScroll: 0,
+    bubble: null,
+    lineBag: [],
+    lastLine: '',
   }
 }
 
@@ -273,13 +330,10 @@ function tapMults(s: State): { views: number; audience: number; cash: number } {
   let audience = 1
   let cash = 1
   for (const u of UPGRADES) {
-    if (!s.bought[u.id]) continue
-    if (u.kind === 'tapAudience') audience *= u.mult
-    if (u.kind === 'tap') {
-      views *= u.mult
-      audience *= u.mult
-      cash *= u.mult
-    }
+    if (!s.bought[u.id] || u.kind !== 'tap') continue
+    views *= u.mult
+    audience *= u.mult
+    cash *= u.mult
   }
   return { views, audience, cash }
 }
@@ -312,6 +366,43 @@ export function fmtAud(n: number): string {
   return text + ' aud/s'
 }
 
+export function linePool(s: State): string[] {
+  const lines = [...BOOT_LINES]
+  if (s.bought.catchphrase) lines.push(...CATCHPHRASE_LINES)
+  if (s.bought.introSting) lines.push(...INTRO_STING_LINES)
+  return lines
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const out = items.slice()
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = out[i]
+    out[i] = out[j]
+    out[j] = tmp
+  }
+  return out
+}
+
+function refillBag(s: State) {
+  const bag = shuffle(linePool(s))
+  if (bag.length > 1 && bag[0] === s.lastLine) {
+    const swap = 1 + Math.floor(Math.random() * (bag.length - 1))
+    const tmp = bag[0]
+    bag[0] = bag[swap]
+    bag[swap] = tmp
+  }
+  s.lineBag = bag
+}
+
+export function nextLine(s: State): string {
+  if (s.lineBag.length === 0) refillBag(s)
+  const line = s.lineBag.shift()
+  const text = line ?? BOOT_LINES[0]
+  s.lastLine = text
+  return text
+}
+
 function refreshSubs(s: State) {
   const raw = s.views * 0.42 + s.audience * 52
   const next = clamp(Math.floor(raw), 0, SUB_GOAL)
@@ -334,14 +425,17 @@ export function tap(s: State, originX: number, originY: number): number {
   s.bounce = 1
   s.tapPulse = 1
   s.rec = s.act === 'record' ? 1.15 : 0.55
-  s.talk = s.act === 'talk' ? 0.4 : 0.12
+  s.talk = 0.45
   s.ripples.push({ r: 8, a: 0.7 })
   if (s.ripples.length > 6) s.ripples.shift()
+
+  const line = nextLine(s)
+  s.bubble = { text: line, life: 1.7, max: 1.7, pulse: 1 }
 
   const gained = Math.max(1, Math.round(views))
   s.floaters.push({
     x: originX + (Math.random() - 0.5) * 36,
-    y: originY,
+    y: originY + 28,
     vy: -46 - Math.random() * 18,
     life: 0.85,
     max: 0.85,
@@ -383,6 +477,7 @@ export function buy(s: State, kind: ShopKind, id: ShopItemId): boolean {
   if (s.cash < def.cost) return false
   s.cash -= def.cost
   s.bought[def.id] = true
+  if (def.lines) s.lineBag = []
   refreshSubs(s)
   return true
 }
@@ -410,6 +505,12 @@ export function tick(s: State, dt: number) {
   s.rec = Math.max(0, s.rec - dt * 2.2)
   s.talk = Math.max(0, s.talk - dt * 3)
   s.tapPulse = Math.max(0, s.tapPulse - dt * 5)
+
+  if (s.bubble) {
+    s.bubble.life -= dt
+    s.bubble.pulse = Math.max(0, s.bubble.pulse - dt * 8)
+    if (s.bubble.life <= 0) s.bubble = null
+  }
 
   s.graphT += dt
   if (s.graphT > 0.22) {
