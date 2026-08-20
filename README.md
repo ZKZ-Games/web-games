@@ -4,7 +4,7 @@ A tiny studio kit for one-screen canvas games.
 
 Orbit is the first game: hold, aim, release, land on pads.
 
-TubeEmpire is the bedroom tap-clicker: mash TAP, buy unlocks for audience/s, hit 1,000 subs.
+TubeEmpire is the bedroom tap-clicker: mash TAP, buy skills for audience/s, hit 1,000 subs.
 
 ## Setup
 
@@ -16,7 +16,7 @@ pnpm dev launches Orbit (the playground). Hold to charge, aim with the pointer, 
 
 Same thing: pnpm --filter playground dev
 
-Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy Cheap webcam, grow to 1,000 subs.
+Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy Personality, grow to 1,000 subs.
 
 ## New title
 

@@ -7,6 +7,7 @@ import {
   type UnlockId,
   type UpgradeId,
   SUB_GOAL,
+  audiencePerSec,
   canBuy,
   fmtAud,
   fmtCash,
@@ -54,7 +55,7 @@ const DH = 400
 
 export function layout(w: number, h: number, s: State): Layout {
   const narrow = w < 820 || h < 560
-  const hudH = Math.max(58, Math.min(72, h * 0.1))
+  const hudH = Math.max(66, Math.min(78, h * 0.11))
   const shopW = narrow ? w : Math.max(248, Math.min(312, w * 0.28))
   const shopH = narrow ? Math.max(200, Math.min(280, h * 0.36)) : h - hudH
   const room: Rect = {
@@ -209,6 +210,7 @@ export function draw(view: CanvasApp, s: State, L: Layout) {
   drawHud(ctx, s, L, width)
   drawShop(ctx, s, L)
   drawTap(ctx, s, L)
+  drawBubble(ctx, s, L)
   drawFloaters(ctx, s, L)
   if (s.eraDone) drawDone(ctx, L)
   ctx.fillStyle = 'rgba(8,4,10,0.18)'
@@ -288,20 +290,14 @@ function drawRoom(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   drawClutter(ctx, f)
   drawMonitor(ctx, f, s)
   drawDesk(ctx, f, s)
-  drawGear(ctx, f, s, t)
+  drawGear(ctx, f, t)
   drawPerson(ctx, f, s, t)
-  drawIdeas(ctx, f, s)
+  drawIdeas(ctx, f)
 
   ctx.fillStyle = 'rgba(255, 170, 70, 0.07)'
   ctx.beginPath()
   ctx.ellipse(f.x(168), f.y(250), f.u(90), f.u(50), 0, 0, Math.PI * 2)
   ctx.fill()
-  if (s.owned.ring > 0) {
-    ctx.fillStyle = 'rgba(255, 230, 180, 0.08)'
-    ctx.beginPath()
-    ctx.ellipse(f.x(455), f.y(210), f.u(70), f.u(80), 0, 0, Math.PI * 2)
-    ctx.fill()
-  }
 
   ctx.fillStyle = '#f5f0e6'
   ctx.font = `700 ${Math.max(22, f.u(28))}px ui-sans-serif, system-ui, sans-serif`
@@ -468,12 +464,8 @@ function drawDesk(ctx: CanvasRenderingContext2D, f: Fit, s: State) {
   ctx.beginPath()
   ctx.arc(f.x(272), f.y(232), f.u(7), 0, Math.PI * 2)
   ctx.fill()
-  const camOn = s.owned.webcam > 0
-  ctx.fillStyle = camOn
-    ? `rgba(80,180,255,${0.45 + s.rec * 0.4})`
-    : s.rec > 0
-      ? `rgba(255,40,40,${0.45 + s.rec * 0.55})`
-      : '#5a2020'
+  ctx.fillStyle =
+    s.rec > 0 ? `rgba(255,40,40,${0.45 + s.rec * 0.55})` : '#5a2020'
   ctx.beginPath()
   ctx.arc(f.x(272), f.y(232), f.u(3.2), 0, Math.PI * 2)
   ctx.fill()
@@ -520,42 +512,24 @@ function crate(
   ctx.strokeRect(x + 3, y + 3, w - 6, h - 6)
 }
 
-function drawGear(ctx: CanvasRenderingContext2D, f: Fit, s: State, t: number) {
-  const ringOn = s.owned.ring > 0
+function drawGear(ctx: CanvasRenderingContext2D, f: Fit, t: number) {
   ctx.fillStyle = '#2a2a2e'
   ctx.fillRect(f.x(452), f.y(200), f.u(6), f.u(88))
   ctx.fillStyle = '#1a1a1e'
   ctx.fillRect(f.x(438), f.y(284), f.u(34), f.u(8))
-  const pulse = ringOn ? 0.55 + Math.sin(t * 4) * 0.15 : 0.12
-  ctx.strokeStyle = ringOn ? `rgba(255, 220, 140, ${pulse})` : 'rgba(180,180,190,0.35)'
-  ctx.lineWidth = f.u(ringOn ? 7 : 5)
+  const dim = 0.16 + Math.sin(t * 1.4) * 0.03
+  ctx.strokeStyle = `rgba(180,180,190,${0.28 + dim * 0.2})`
+  ctx.lineWidth = f.u(5)
   ctx.beginPath()
   ctx.arc(f.x(455), f.y(188), f.u(22), 0, Math.PI * 2)
   ctx.stroke()
-  ctx.strokeStyle = ringOn ? `rgba(255,255,255,${pulse})` : 'rgba(255,255,255,0.15)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'
   ctx.lineWidth = f.u(2)
   ctx.beginPath()
   ctx.arc(f.x(455), f.y(188), f.u(14), 0, Math.PI * 2)
   ctx.stroke()
-  if (ringOn) {
-    const g = ctx.createRadialGradient(
-      f.x(455),
-      f.y(188),
-      f.u(8),
-      f.x(455),
-      f.y(188),
-      f.u(40),
-    )
-    g.addColorStop(0, 'rgba(255,240,180,0.28)')
-    g.addColorStop(1, 'rgba(255,200,80,0)')
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.arc(f.x(455), f.y(188), f.u(40), 0, Math.PI * 2)
-    ctx.fill()
-  }
 
-  const micOn = s.owned.mic > 0
-  ctx.fillStyle = micOn ? '#1a1a1e' : '#2a2a30'
+  ctx.fillStyle = '#2a2a30'
   ctx.beginPath()
   ctx.ellipse(f.x(412), f.y(214), f.u(8), f.u(14), 0, 0, Math.PI * 2)
   ctx.fill()
@@ -563,10 +537,6 @@ function drawGear(ctx: CanvasRenderingContext2D, f: Fit, s: State, t: number) {
   ctx.fillRect(f.x(409), f.y(226), f.u(6), f.u(22))
   ctx.fillStyle = '#222'
   ctx.fillRect(f.x(400), f.y(246), f.u(24), f.u(5))
-  if (micOn) {
-    ctx.fillStyle = `rgba(120, 200, 255, ${0.35 + Math.sin(t * 6) * 0.15})`
-    ctx.fillRect(f.x(410), f.y(208), f.u(4), f.u(8))
-  }
 }
 
 function drawPerson(ctx: CanvasRenderingContext2D, f: Fit, s: State, t: number) {
@@ -671,32 +641,117 @@ function drawPerson(ctx: CanvasRenderingContext2D, f: Fit, s: State, t: number) 
   ctx.fill()
 }
 
-function drawIdeas(ctx: CanvasRenderingContext2D, f: Fit, s: State) {
-  const n = 1 + Math.min(3, s.owned.thumbnail)
-  for (let i = 0; i < n; i++) {
-    fillRr(
-      ctx,
-      f.x(26 + i * 6),
-      f.y(100 + i * 4),
-      f.u(54),
-      f.u(48),
-      3,
-      i % 2 ? '#f6e27a' : '#f3d34a',
-    )
-  }
+function drawIdeas(ctx: CanvasRenderingContext2D, f: Fit) {
+  fillRr(ctx, f.x(26), f.y(100), f.u(54), f.u(48), 3, '#f3d34a')
+  fillRr(ctx, f.x(32), f.y(104), f.u(54), f.u(48), 3, '#f6e27a')
   ctx.fillStyle = '#3a2a10'
   ctx.font = `800 ${f.u(7)}px ui-sans-serif`
   ctx.textAlign = 'left'
-  ctx.fillText(s.owned.thumbnail > 0 ? 'THUMBS' : 'IDEAS', f.x(34), f.y(116))
+  ctx.fillText('IDEAS', f.x(40), f.y(120))
   ctx.font = `700 ${f.u(5.5)}px ui-sans-serif`
-  ctx.fillText('Gameplay', f.x(34), f.y(128))
-  ctx.fillText('Skits', f.x(34), f.y(136))
-  ctx.fillText('Reactions', f.x(34), f.y(144))
-  if (s.owned.viral > 0) {
-    ctx.fillStyle = '#ff7a18'
-    ctx.font = `800 ${f.u(10)}px ui-sans-serif`
-    ctx.fillText('🔥', f.x(64), f.y(112))
+  ctx.fillText('Gameplay', f.x(40), f.y(132))
+  ctx.fillText('Skits', f.x(40), f.y(140))
+  ctx.fillText('Reactions', f.x(40), f.y(148))
+}
+
+function wrapBubble(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(' ')
+  const lines: string[] = []
+  let cur = ''
+  for (const word of words) {
+    const next = cur ? cur + ' ' + word : word
+    if (cur && ctx.measureText(next).width > maxW) {
+      lines.push(cur)
+      cur = word
+    } else {
+      cur = next
+    }
   }
+  if (cur) lines.push(cur)
+  return lines
+}
+
+function drawBubble(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
+  if (!s.bubble) return
+  const f = fitOf(L.room)
+  const fade = s.bubble.life > 0.28 ? 1 : clamp(s.bubble.life / 0.28, 0, 1)
+  const pop = 1 + s.bubble.pulse * 0.12
+  const fontPx = Math.max(16, Math.min(22, f.u(16)))
+  ctx.font = `800 ${fontPx}px ui-sans-serif, system-ui, sans-serif`
+  const maxW = Math.max(180, Math.min(L.room.w * 0.5, 280))
+  const lines = wrapBubble(ctx, s.bubble.text, maxW)
+  const padX = 14
+  const padY = 10
+  const lineH = fontPx * 1.2
+  let tw = 0
+  for (const line of lines) tw = Math.max(tw, ctx.measureText(line).width)
+  const bw = tw + padX * 2
+  const bh = lines.length * lineH + padY * 2
+
+  const hop = s.bounce * f.u(10)
+  const idle = Math.sin(s.time * 3) * f.u(1.2)
+  const hx = f.x(318)
+  const hy = f.y(232) - hop + idle - f.u(44)
+  const minX = L.room.x + 10
+  const maxX = L.room.x + L.room.w - bw - 10
+  const minY = L.hud.h + 8
+  const maxY = Math.min(hy - bh - 10, L.tap.y - L.tap.r - bh - 12)
+  let bx = hx - bw * 0.55
+  let by = hy - bh - f.u(22)
+  bx = maxX < minX ? L.room.x + 10 : clamp(bx, minX, maxX)
+  by = maxY < minY ? minY : clamp(by, minY, maxY)
+
+  const cx = bx + bw / 2
+  const cy = by + bh / 2
+  ctx.save()
+  ctx.globalAlpha = fade
+  ctx.translate(cx, cy)
+  ctx.scale(pop, pop)
+  ctx.translate(-cx, -cy)
+
+  ctx.fillStyle = 'rgba(18, 10, 16, 0.35)'
+  ctx.beginPath()
+  ctx.roundRect(bx + 3, by + 4, bw, bh, 12)
+  ctx.fill()
+  fillRr(ctx, bx, by, bw, bh, 12, '#fff8e8')
+  ctx.strokeStyle = '#1a1018'
+  ctx.lineWidth = 3
+  rr(ctx, bx, by, bw, bh, 12)
+  ctx.stroke()
+
+  const mouthX = hx + f.u(4)
+  const mouthY = hy + f.u(8)
+  const tailX = clamp(mouthX, bx + 22, bx + bw - 22)
+  ctx.fillStyle = '#fff8e8'
+  ctx.beginPath()
+  ctx.moveTo(tailX - 9, by + bh - 1)
+  ctx.lineTo(mouthX, mouthY)
+  ctx.lineTo(tailX + 11, by + bh - 1)
+  ctx.closePath()
+  ctx.fill()
+  ctx.strokeStyle = '#1a1018'
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.moveTo(tailX - 9, by + bh - 1)
+  ctx.lineTo(mouthX, mouthY)
+  ctx.lineTo(tailX + 11, by + bh - 1)
+  ctx.stroke()
+  ctx.fillStyle = '#fff8e8'
+  ctx.beginPath()
+  ctx.moveTo(tailX - 7, by + bh - 2)
+  ctx.lineTo(tailX + 9, by + bh - 2)
+  ctx.lineTo(tailX + 1, by + bh - 8)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.fillStyle = '#1a1018'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = `800 ${fontPx}px ui-sans-serif, system-ui, sans-serif`
+  lines.forEach((line, i) => {
+    ctx.fillText(line, bx + bw / 2, by + padY + lineH * i + lineH * 0.5)
+  })
+  ctx.restore()
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, s: State, L: Layout, width: number) {
@@ -710,7 +765,7 @@ function drawHud(ctx: CanvasRenderingContext2D, s: State, L: Layout, width: numb
     { label: 'Views', value: fmtInt(s.views), color: '#2a2a32' },
     { label: 'Cash', value: fmtCash(s.cash), color: '#1f7a3a' },
     { label: 'Subs', value: `${fmtInt(s.subs)} / ${fmtInt(SUB_GOAL)}`, color: '#2a2a32' },
-    { label: 'Audience', value: fmtRate(s.audience), color: '#1f7a3a' },
+    { label: 'Audience', value: fmtAud(audiencePerSec(s)), color: '#1f7a3a' },
   ]
   const gap = 12
   const boxW = Math.min(200, (width - 28 - gap * 3) / 4)
@@ -724,7 +779,10 @@ function drawHud(ctx: CanvasRenderingContext2D, s: State, L: Layout, width: numb
     ctx.textBaseline = 'top'
     ctx.fillText(st.label, x + 10, y + 6)
     ctx.fillStyle = st.color
-    ctx.font = '800 18px ui-sans-serif, system-ui, sans-serif'
+    ctx.font =
+      st.label === 'Audience'
+        ? '800 16px ui-sans-serif, system-ui, sans-serif'
+        : '800 18px ui-sans-serif, system-ui, sans-serif'
     ctx.fillText(st.value, x + 10, y + 20)
     if (st.label === 'Subs') {
       const bx = x + 10
@@ -732,6 +790,11 @@ function drawHud(ctx: CanvasRenderingContext2D, s: State, L: Layout, width: numb
       const bw = boxW - 20
       fillRr(ctx, bx, by, bw, 6, 3, '#d5c8b0')
       fillRr(ctx, bx, by, bw * (s.subs / SUB_GOAL), 6, 3, '#e23d3d')
+    }
+    if (st.label === 'Audience') {
+      ctx.fillStyle = '#5a6a48'
+      ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'
+      ctx.fillText(fmtRate(s.audience), x + 10, y + 38)
     }
   })
 }
@@ -761,7 +824,7 @@ function drawShop(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   ctx.font = '800 10px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText('UNLOCKS', L.unlockHead.x + 2, L.unlockHead.y + L.unlockHead.h / 2)
+  ctx.fillText('SKILLS', L.unlockHead.x + 2, L.unlockHead.y + L.unlockHead.h / 2)
 
   if (L.upgradeHead) {
     ctx.fillText('UPGRADES', L.upgradeHead.x + 2, L.upgradeHead.y + L.upgradeHead.h / 2)
@@ -816,12 +879,24 @@ function drawShopRow(ctx: CanvasRenderingContext2D, s: State, row: ShopRow) {
     return
   }
 
+  const b = row.buy
+  if (row.kind === 'unlock') {
+    const def = unlockDef(row.id as UnlockId)!
+    drawUnlockIcon(ctx, x + 18, y + h / 2, def.id, s)
+  } else {
+    drawUpgradeIcon(ctx, x + 18, y + h / 2, row.id as UpgradeId)
+  }
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(x + 36, y, Math.max(8, b.x - (x + 36) - 6), h)
+  ctx.clip()
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
   if (row.kind === 'unlock') {
     const def = unlockDef(row.id as UnlockId)!
     const owned = s.owned[def.id]
     const price = priceOf(def, owned)
     const each = unlockAudPerSec(s, def.id)
-    drawUnlockIcon(ctx, x + 18, y + h / 2, def.id, s)
     ctx.fillStyle = '#f4efe6'
     ctx.font = '800 13px ui-sans-serif, system-ui, sans-serif'
     const count = owned > 0 ? `  ×${owned}` : ''
@@ -831,7 +906,6 @@ function drawShopRow(ctx: CanvasRenderingContext2D, s: State, row: ShopRow) {
     ctx.fillText(fmtCash(price) + ' · ' + fmtAud(each), x + 40, hintY)
   } else {
     const def = upgradeDef(row.id as UpgradeId)!
-    drawUpgradeIcon(ctx, x + 18, y + h / 2, def.id)
     ctx.fillStyle = '#f4efe6'
     ctx.font = '800 13px ui-sans-serif, system-ui, sans-serif'
     ctx.fillText(def.name, x + 40, nameY)
@@ -839,8 +913,7 @@ function drawShopRow(ctx: CanvasRenderingContext2D, s: State, row: ShopRow) {
     ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'
     ctx.fillText(fmtCash(def.cost) + ' · ' + def.hint, x + 40, hintY)
   }
-
-  const b = row.buy
+  ctx.restore()
   fillRr(ctx, b.x, b.y, b.w, b.h, 7, ok ? '#2f9e58' : '#3a4458')
   ctx.fillStyle = ok ? '#f4fff4' : '#8a93a4'
   ctx.font = '800 12px ui-sans-serif, system-ui, sans-serif'
@@ -868,27 +941,46 @@ function drawUnlockIcon(
   id: UnlockId,
   s: State,
 ) {
-  if (id === 'webcam') {
-    fillRr(ctx, x - 8, y - 6, 16, 11, 2, s.owned.webcam ? '#4aa3e8' : '#8aa0b8')
-    ctx.fillStyle = '#12202e'
-    ctx.beginPath()
-    ctx.arc(x, y, 3.2, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = s.owned.webcam ? '#4aa3e8' : '#8aa0b8'
-    ctx.fillRect(x + 6, y - 2, 5, 4)
-  } else if (id === 'ring') {
-    ctx.strokeStyle = s.owned.ring ? '#ffe27a' : '#c8c0a8'
-    ctx.lineWidth = 3
+  const on = s.owned[id] > 0
+  if (id === 'personality') {
+    ctx.fillStyle = on ? '#f0c14b' : '#c8b888'
     ctx.beginPath()
     ctx.arc(x, y, 8, 0, Math.PI * 2)
-    ctx.stroke()
-  } else if (id === 'mic') {
-    ctx.fillStyle = '#1a1a1e'
-    ctx.beginPath()
-    ctx.ellipse(x, y - 2, 5, 7, 0, 0, Math.PI * 2)
     ctx.fill()
-    ctx.fillStyle = '#555'
-    ctx.fillRect(x - 1.5, y + 4, 3, 6)
+    ctx.fillStyle = '#2a1a14'
+    ctx.beginPath()
+    ctx.arc(x - 2.6, y - 1.4, 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + 2.6, y - 1.4, 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#2a1a14'
+    ctx.lineWidth = 1.4
+    ctx.beginPath()
+    ctx.arc(x, y + 1.4, 3.2, 0.15, Math.PI - 0.15)
+    ctx.stroke()
+  } else if (id === 'editing') {
+    ctx.strokeStyle = on ? '#8ad4ff' : '#8aa0b8'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(x - 7, y - 6)
+    ctx.lineTo(x + 7, y + 6)
+    ctx.stroke()
+    ctx.fillStyle = on ? '#e8eefc' : '#8aa0b8'
+    ctx.beginPath()
+    ctx.moveTo(x - 8, y - 2)
+    ctx.lineTo(x - 2, y - 8)
+    ctx.lineTo(x + 1, y - 5)
+    ctx.lineTo(x - 5, y + 1)
+    ctx.closePath()
+    ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(x + 8, y + 2)
+    ctx.lineTo(x + 2, y + 8)
+    ctx.lineTo(x - 1, y + 5)
+    ctx.lineTo(x + 5, y - 1)
+    ctx.closePath()
+    ctx.fill()
   } else if (id === 'thumbnail') {
     fillRr(ctx, x - 9, y - 7, 18, 14, 2, '#2a2e38')
     ctx.fillStyle = '#e23d3d'
@@ -898,78 +990,77 @@ function drawUnlockIcon(
     ctx.lineTo(x + 5, y)
     ctx.closePath()
     ctx.fill()
+  } else if (id === 'hooks') {
+    ctx.strokeStyle = on ? '#f0c14b' : '#c8b888'
+    ctx.lineWidth = 2.2
+    ctx.beginPath()
+    ctx.moveTo(x, y - 8)
+    ctx.lineTo(x, y + 2)
+    ctx.arc(x, y + 4, 4, -Math.PI / 2, Math.PI * 0.85)
+    ctx.stroke()
+    ctx.fillStyle = on ? '#f0c14b' : '#c8b888'
+    ctx.beginPath()
+    ctx.arc(x, y - 8, 2.2, 0, Math.PI * 2)
+    ctx.fill()
   } else {
-    ctx.fillStyle = '#ff7a18'
-    ctx.font = '800 16px ui-sans-serif'
+    ctx.fillStyle = on ? '#fff4c8' : '#c8c0a8'
+    ctx.font = '800 16px ui-sans-serif, system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('🔥', x, y + 1)
+    ctx.fillText('“ ”', x, y + 1)
   }
 }
 
 function drawUpgradeIcon(ctx: CanvasRenderingContext2D, x: number, y: number, id: UpgradeId) {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  if (id === 'autofocus') {
+  if (id === 'catchphrase') {
+    ctx.fillStyle = '#fff4c8'
+    ctx.font = '800 14px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText('“!”', x, y + 1)
+  } else if (id === 'deadpan') {
+    ctx.fillStyle = '#f0c14b'
+    ctx.beginPath()
+    ctx.arc(x, y, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#2a1a14'
+    ctx.beginPath()
+    ctx.arc(x - 2.6, y - 1.2, 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + 2.6, y - 1.2, 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#2a1a14'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(x - 3.2, y + 3)
+    ctx.lineTo(x + 3.2, y + 3)
+    ctx.stroke()
+  } else if (id === 'jumpCuts') {
     ctx.strokeStyle = '#8ad4ff'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(x, y, 6, 0, Math.PI * 2)
+    ctx.moveTo(x - 6, y - 5)
+    ctx.lineTo(x + 2, y - 5)
+    ctx.moveTo(x - 2, y + 5)
+    ctx.lineTo(x + 6, y + 5)
     ctx.stroke()
     ctx.beginPath()
-    ctx.arc(x, y, 2, 0, Math.PI * 2)
+    ctx.moveTo(x - 1, y - 8)
+    ctx.lineTo(x + 3, y)
+    ctx.lineTo(x - 3, y)
+    ctx.lineTo(x + 1, y + 8)
     ctx.stroke()
-  } else if (id === 'fasterTakes') {
-    ctx.fillStyle = '#f0c14b'
-    ctx.beginPath()
-    ctx.moveTo(x - 3, y - 8)
-    ctx.lineTo(x + 5, y - 1)
-    ctx.lineTo(x + 0.5, y - 1)
-    ctx.lineTo(x + 4, y + 8)
-    ctx.lineTo(x - 5, y + 1)
-    ctx.lineTo(x - 0.5, y + 1)
-    ctx.closePath()
-    ctx.fill()
-  } else if (id === 'catchlight') {
-    ctx.strokeStyle = '#ffe27a'
+  } else if (id === 'smashZoom') {
+    ctx.strokeStyle = '#f0c14b'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(x, y, 7, 0, Math.PI * 2)
+    ctx.arc(x - 1, y - 1, 5.5, 0, Math.PI * 2)
     ctx.stroke()
-    ctx.fillStyle = '#fff4c8'
     ctx.beginPath()
-    ctx.arc(x + 3, y - 3, 2, 0, Math.PI * 2)
-    ctx.fill()
-  } else if (id === 'nightStream') {
-    ctx.fillStyle = '#7aa0e8'
-    ctx.beginPath()
-    ctx.arc(x, y, 7, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = '#1b2a4a'
-    ctx.beginPath()
-    ctx.arc(x + 3, y - 1, 5.5, 0, Math.PI * 2)
-    ctx.fill()
-  } else if (id === 'popFilter') {
-    ctx.strokeStyle = '#c8d0dc'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(x, y, 7, 0, Math.PI * 2)
+    ctx.moveTo(x + 3, y + 3)
+    ctx.lineTo(x + 8, y + 8)
     ctx.stroke()
-    ctx.fillStyle = '#1a1a1e'
-    ctx.beginPath()
-    ctx.ellipse(x, y, 3, 4.5, 0, 0, Math.PI * 2)
-    ctx.fill()
-  } else if (id === 'loudTakes') {
-    ctx.fillStyle = '#e8eefc'
-    ctx.beginPath()
-    ctx.moveTo(x - 6, y - 3)
-    ctx.lineTo(x - 2, y - 3)
-    ctx.lineTo(x + 3, y - 7)
-    ctx.lineTo(x + 3, y + 7)
-    ctx.lineTo(x - 2, y + 3)
-    ctx.lineTo(x - 6, y + 3)
-    ctx.closePath()
-    ctx.fill()
   } else if (id === 'redArrow') {
     ctx.fillStyle = '#e23d3d'
     ctx.beginPath()
@@ -982,10 +1073,33 @@ function drawUpgradeIcon(ctx: CanvasRenderingContext2D, x: number, y: number, id
     ctx.lineTo(x + 3, y + 7)
     ctx.closePath()
     ctx.fill()
+  } else if (id === 'shockFace') {
+    ctx.fillStyle = '#f0c14b'
+    ctx.beginPath()
+    ctx.arc(x, y, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#2a1a14'
+    ctx.beginPath()
+    ctx.arc(x - 2.6, y - 1.6, 1.4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + 2.6, y - 1.6, 1.4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(x, y + 3.2, 2.2, 2.6, 0, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (id === 'coldOpen') {
+    ctx.fillStyle = '#8ad4ff'
+    ctx.beginPath()
+    ctx.moveTo(x - 5, y - 7)
+    ctx.lineTo(x - 5, y + 7)
+    ctx.lineTo(x + 8, y)
+    ctx.closePath()
+    ctx.fill()
   } else {
-    ctx.fillStyle = '#ff7a18'
-    ctx.font = '800 11px ui-sans-serif'
-    ctx.fillText('#', x, y + 1)
+    ctx.fillStyle = '#f0c14b'
+    ctx.font = '800 13px ui-sans-serif, system-ui, sans-serif'
+    ctx.fillText('♪', x, y + 1)
   }
 }
 
