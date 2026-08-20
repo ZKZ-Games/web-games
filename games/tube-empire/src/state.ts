@@ -430,7 +430,7 @@ export function tap(s: State, originX: number, originY: number): number {
   if (s.ripples.length > 6) s.ripples.shift()
 
   const line = nextLine(s)
-  s.bubble = { text: line, life: 1.7, max: 1.7, pulse: 1 }
+  s.bubble = { text: line, life: 2.4, max: 2.4, pulse: 1 }
 
   const gained = Math.max(1, Math.round(views))
   s.floaters.push({

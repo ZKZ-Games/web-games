@@ -210,6 +210,7 @@ export function draw(view: CanvasApp, s: State, L: Layout) {
   drawHud(ctx, s, L, width)
   drawShop(ctx, s, L)
   drawTap(ctx, s, L)
+  drawBubble(ctx, s, L)
   drawFloaters(ctx, s, L)
   if (s.eraDone) drawDone(ctx, L)
   ctx.fillStyle = 'rgba(8,4,10,0.18)'
@@ -291,7 +292,6 @@ function drawRoom(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   drawDesk(ctx, f, s)
   drawGear(ctx, f, t)
   drawPerson(ctx, f, s, t)
-  drawBubble(ctx, f, s, L)
   drawIdeas(ctx, f)
 
   ctx.fillStyle = 'rgba(255, 170, 70, 0.07)'
@@ -671,17 +671,18 @@ function wrapBubble(ctx: CanvasRenderingContext2D, text: string, maxW: number): 
   return lines
 }
 
-function drawBubble(ctx: CanvasRenderingContext2D, f: Fit, s: State, L: Layout) {
+function drawBubble(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   if (!s.bubble) return
-  const fade = clamp(s.bubble.life / 0.22, 0, 1)
-  const pop = 1 + s.bubble.pulse * 0.1
-  const fontPx = Math.max(14, f.u(13))
+  const f = fitOf(L.room)
+  const fade = s.bubble.life > 0.28 ? 1 : clamp(s.bubble.life / 0.28, 0, 1)
+  const pop = 1 + s.bubble.pulse * 0.12
+  const fontPx = Math.max(16, Math.min(22, f.u(16)))
   ctx.font = `800 ${fontPx}px ui-sans-serif, system-ui, sans-serif`
-  const maxW = Math.max(168, Math.min(L.room.w * 0.44, f.u(210)))
+  const maxW = Math.max(180, Math.min(L.room.w * 0.5, 280))
   const lines = wrapBubble(ctx, s.bubble.text, maxW)
-  const padX = Math.max(12, f.u(12))
-  const padY = Math.max(9, f.u(9))
-  const lineH = fontPx * 1.22
+  const padX = 14
+  const padY = 10
+  const lineH = fontPx * 1.2
   let tw = 0
   for (const line of lines) tw = Math.max(tw, ctx.measureText(line).width)
   const bw = tw + padX * 2
@@ -691,10 +692,14 @@ function drawBubble(ctx: CanvasRenderingContext2D, f: Fit, s: State, L: Layout) 
   const idle = Math.sin(s.time * 3) * f.u(1.2)
   const hx = f.x(318)
   const hy = f.y(232) - hop + idle - f.u(44)
-  let bx = hx - bw * 0.72
-  let by = hy - bh - f.u(26)
-  bx = clamp(bx, L.room.x + 10, L.room.x + L.room.w - bw - 10)
-  by = clamp(by, L.room.y + 10, hy - bh - 8)
+  const minX = L.room.x + 10
+  const maxX = L.room.x + L.room.w - bw - 10
+  const minY = L.hud.h + 8
+  const maxY = Math.min(hy - bh - 10, L.tap.y - L.tap.r - bh - 12)
+  let bx = hx - bw * 0.55
+  let by = hy - bh - f.u(22)
+  bx = maxX < minX ? L.room.x + 10 : clamp(bx, minX, maxX)
+  by = maxY < minY ? minY : clamp(by, minY, maxY)
 
   const cx = bx + bw / 2
   const cy = by + bh / 2
@@ -704,28 +709,40 @@ function drawBubble(ctx: CanvasRenderingContext2D, f: Fit, s: State, L: Layout) 
   ctx.scale(pop, pop)
   ctx.translate(-cx, -cy)
 
+  ctx.fillStyle = 'rgba(18, 10, 16, 0.35)'
+  ctx.beginPath()
+  ctx.roundRect(bx + 3, by + 4, bw, bh, 12)
+  ctx.fill()
   fillRr(ctx, bx, by, bw, bh, 12, '#fff8e8')
   ctx.strokeStyle = '#1a1018'
-  ctx.lineWidth = 2.5
+  ctx.lineWidth = 3
   rr(ctx, bx, by, bw, bh, 12)
   ctx.stroke()
 
-  const mouthX = hx + f.u(6)
-  const mouthY = hy + f.u(10)
-  const tailX = clamp(mouthX, bx + 18, bx + bw - 18)
+  const mouthX = hx + f.u(4)
+  const mouthY = hy + f.u(8)
+  const tailX = clamp(mouthX, bx + 22, bx + bw - 22)
   ctx.fillStyle = '#fff8e8'
   ctx.beginPath()
-  ctx.moveTo(tailX - 8, by + bh - 1)
+  ctx.moveTo(tailX - 9, by + bh - 1)
   ctx.lineTo(mouthX, mouthY)
-  ctx.lineTo(tailX + 10, by + bh - 1)
+  ctx.lineTo(tailX + 11, by + bh - 1)
   ctx.closePath()
   ctx.fill()
   ctx.strokeStyle = '#1a1018'
+  ctx.lineWidth = 3
   ctx.beginPath()
-  ctx.moveTo(tailX - 8, by + bh - 1)
+  ctx.moveTo(tailX - 9, by + bh - 1)
   ctx.lineTo(mouthX, mouthY)
-  ctx.lineTo(tailX + 10, by + bh - 1)
+  ctx.lineTo(tailX + 11, by + bh - 1)
   ctx.stroke()
+  ctx.fillStyle = '#fff8e8'
+  ctx.beginPath()
+  ctx.moveTo(tailX - 7, by + bh - 2)
+  ctx.lineTo(tailX + 9, by + bh - 2)
+  ctx.lineTo(tailX + 1, by + bh - 8)
+  ctx.closePath()
+  ctx.fill()
 
   ctx.fillStyle = '#1a1018'
   ctx.textAlign = 'center'
@@ -873,6 +890,8 @@ function drawShopRow(ctx: CanvasRenderingContext2D, s: State, row: ShopRow) {
   ctx.beginPath()
   ctx.rect(x + 36, y, Math.max(8, b.x - (x + 36) - 6), h)
   ctx.clip()
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
   if (row.kind === 'unlock') {
     const def = unlockDef(row.id as UnlockId)!
     const owned = s.owned[def.id]
