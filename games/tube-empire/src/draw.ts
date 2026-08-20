@@ -1212,6 +1212,32 @@ export function hitTap(L: Layout, x: number, y: number): boolean {
   return dx * dx + dy * dy <= (L.tap.r + 8) ** 2
 }
 
+export function hitBuy(buy: Rect, x: number, y: number): boolean {
+  const pad = 4
+  return (
+    x >= buy.x - pad &&
+    y >= buy.y - pad &&
+    x <= buy.x + buy.w + pad &&
+    y <= buy.y + buy.h + pad
+  )
+}
+
+export function pickPress(
+  L: Layout,
+  x: number,
+  y: number,
+): { action: 'buy'; row: ShopRow } | { action: 'block' } | { action: 'tap' } {
+  if (hitRect(L.shop, x, y)) {
+    const row = L.rows.find(
+      (r) => !r.mystery && hitBuy(r.buy, x, y) && hitRect(L.shopList, x, y),
+    )
+    return row ? { action: 'buy', row } : { action: 'block' }
+  }
+  if (hitRect(L.hud, x, y)) return { action: 'block' }
+  if (hitTap(L, x, y) || hitRect(L.room, x, y)) return { action: 'tap' }
+  return { action: 'block' }
+}
+
 export function laptopPoint(L: Layout): { x: number; y: number } {
   const f = fitOf(L.room)
   return { x: f.x(318), y: f.y(200) }
