@@ -1,6 +1,5 @@
 import { createCanvas, createInput, createLoop } from '@web-games/kit'
 
-const TITLE = 'Smile Tac Toe'
 const parent = document.querySelector('#app')
 if (!(parent instanceof HTMLElement)) throw new Error('missing #app')
 
@@ -25,15 +24,11 @@ const YELLOW = {
   face: '#ffd54a',
   rim: '#f4b942',
   ink: '#5a3e12',
-  blush: '#ff9a7a',
-  label: 'Yellow',
 }
 const PINK = {
   face: '#ff7eb3',
   rim: '#f0629a',
   ink: '#5a1d3a',
-  blush: '#ffb3c9',
-  label: 'Pink',
 }
 
 const board: Mark[] = [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -81,19 +76,18 @@ function boardFull(cells: Mark[]) {
 function layout() {
   const { width, height } = view
   const short = Math.min(width, height)
-  const titleH = Math.min(112, height * 0.18)
-  const footH = Math.min(88, height * 0.14)
-  const size = Math.min(width * 0.86, height - titleH - footH, short * 0.82, 520)
+  const topH = Math.min(96, height * 0.16)
+  const footH = Math.min(72, height * 0.12)
+  const size = Math.min(width * 0.86, height - topH - footH, short * 0.82, 520)
   return {
     width,
     height,
     size,
     cell: size / 3,
     ox: (width - size) / 2,
-    oy: titleH + (height - titleH - footH - size) / 2,
-    titleY: Math.max(36, titleH * 0.42),
-    turnY: Math.max(68, titleH * 0.78),
-    footY: height - Math.max(28, footH * 0.42),
+    oy: topH + (height - topH - footH - size) / 2,
+    turnY: Math.max(40, topH * 0.55),
+    footY: height - Math.max(26, footH * 0.45),
   }
 }
 
@@ -234,35 +228,24 @@ function roundRect(
 
 function drawHud(L: ReturnType<typeof layout>) {
   const { ctx } = view
+  if (mode === 'play') {
+    drawSmile(ctx, L.width / 2, L.turnY, 26, turn, 0)
+    return
+  }
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#3d2b1f'
-  ctx.font = `800 ${Math.round(Math.min(40, L.width * 0.07))}px ui-rounded, ui-sans-serif, system-ui, sans-serif`
-  ctx.fillText(TITLE, L.width / 2, L.titleY)
-
-  if (mode === 'play') {
-    const p = palette(turn)
-    drawSmile(ctx, L.width / 2 - 88, L.turnY, 15, turn, 0)
-    ctx.fillStyle = p.ink
-    ctx.font = `700 ${Math.round(Math.min(22, L.width * 0.045))}px ui-sans-serif, system-ui, sans-serif`
-    ctx.fillText(`${p.label}'s turn  ·  tap a cell`, L.width / 2 + 18, L.turnY)
-    ctx.fillStyle = '#8a6a4a'
-    ctx.font = '600 15px ui-sans-serif, system-ui, sans-serif'
-    ctx.fillText('take turns tapping smiles  ·  three in a row', L.width / 2, L.footY)
-  } else {
-    ctx.fillStyle = '#8a6a4a'
-    ctx.font = '600 16px ui-sans-serif, system-ui, sans-serif'
-    const ready = overAge > 0.45
-    const line =
-      winner === 0
-        ? ready
-          ? 'draw  ·  tap the board'
-          : 'draw'
-        : ready
-          ? 'tap the board'
-          : ''
-    if (line) ctx.fillText(line, L.width / 2, L.footY)
-  }
+  ctx.fillStyle = '#8a6a4a'
+  ctx.font = '600 16px ui-sans-serif, system-ui, sans-serif'
+  const ready = overAge > 0.45
+  const line =
+    winner === 0
+      ? ready
+        ? 'draw  ·  tap the board'
+        : 'draw'
+      : ready
+        ? 'tap the board'
+        : ''
+  if (line) ctx.fillText(line, L.width / 2, L.footY)
 }
 
 const loop = createLoop((dt) => {
