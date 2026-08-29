@@ -3,10 +3,22 @@ import {
   ANGRY_YELL,
   FACE_COUNT,
   living,
+  traits,
   type Layout,
   type State,
   type Uncle,
 } from './state'
+
+function mixRgb(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+  t: number,
+) {
+  const r = Math.round(a[0] + (b[0] - a[0]) * t)
+  const g = Math.round(a[1] + (b[1] - a[1]) * t)
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t)
+  return `rgb(${r},${g},${bl})`
+}
 
 const WOOD = '#3a2212'
 const WOOD_DEEP = '#24140b'
@@ -138,25 +150,30 @@ export function drawOjisan(
   u: Uncle,
   opts: { angry: boolean; hover: boolean; time: number },
 ) {
-  const r = u.r
-  const tilt = Math.sin(u.id * 12.7) * 0.07
-  const bob = u.live && !opts.angry ? Math.sin(opts.time * 2.4 + u.id) * r * 0.04 : 0
+  const look = traits(u.id)
+  const r = u.r * look.scale
+  const bob = u.live && !opts.angry ? Math.sin(opts.time * 2.4 + u.id) * r * 0.03 : 0
   const madShake = opts.angry ? Math.sin(opts.time * 28) * r * 0.04 : 0
   ctx.save()
   ctx.translate(u.x + madShake, u.y + bob)
-  ctx.rotate(u.angle + tilt)
-  if (u.fly > 0) ctx.globalAlpha = Math.max(0, Math.min(1, u.fly / 0.25))
+  ctx.rotate(u.angle + look.tilt)
+  if (u.fly > 0) ctx.globalAlpha = Math.max(0, Math.min(1, u.fly / 0.2))
   if (opts.hover && u.live) {
     ctx.shadowColor = '#ffe7a8'
     ctx.shadowBlur = r * 0.55
   }
 
-  const skin = opts.angry ? '#e24b3a' : '#e8b896'
-  const skinDeep = opts.angry ? '#b83228' : '#d4956e'
-  const hair = opts.angry ? '#1a0c08' : '#2b1a12'
+  const skin = opts.angry
+    ? '#e24b3a'
+    : mixRgb([244, 196, 160], [210, 150, 112], look.skin)
+  const skinDeep = opts.angry
+    ? '#b83228'
+    : mixRgb([212, 149, 110], [176, 118, 82], look.skin)
+  const hair = opts.angry ? '#1a0c08' : mixRgb([48, 30, 20], [28, 16, 12], look.hair)
   const ink = opts.angry ? '#2a0808' : '#2a1810'
+  const shirt = opts.angry ? '#7a1c1c' : mixRgb([61, 92, 122], [74, 98, 72], look.collar)
 
-  ctx.fillStyle = opts.angry ? '#7a1c1c' : '#3d5c7a'
+  ctx.fillStyle = shirt
   ctx.beginPath()
   ctx.ellipse(0, r * 0.95, r * 0.72, r * 0.28, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -183,12 +200,14 @@ export function drawOjisan(
   ctx.lineWidth = Math.max(1.5, r * 0.06)
   ctx.stroke()
 
+  const hairW = r * (0.26 + look.hair * 0.08)
+  const hairH = r * (0.52 + look.hair * 0.1)
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.64, r * 0.1, r * 0.3, r * 0.58, 0.18, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.64, r * 0.1, hairW, hairH, 0.18, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.64, r * 0.1, r * 0.3, r * 0.58, -0.18, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.64, r * 0.1, hairW, hairH, -0.18, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
   ctx.ellipse(0, r * 0.58, r * 0.74, r * 0.3, 0, 0, Math.PI * 2)
@@ -215,10 +234,11 @@ export function drawOjisan(
     ctx.lineTo(r * 0.08, -r * 0.02)
     ctx.stroke()
   } else {
+    const browY = -r * (0.08 + look.brow * 0.05)
     ctx.beginPath()
-    ctx.moveTo(-r * 0.42, -r * 0.1)
+    ctx.moveTo(-r * 0.42, browY)
     ctx.lineTo(-r * 0.08, -r * 0.02)
-    ctx.moveTo(r * 0.42, -r * 0.1)
+    ctx.moveTo(r * 0.42, browY)
     ctx.lineTo(r * 0.08, -r * 0.02)
     ctx.stroke()
   }
@@ -249,12 +269,14 @@ export function drawOjisan(
   ctx.closePath()
   ctx.fill()
 
+  const stacheW = r * (0.26 + look.stache * 0.08)
+  const stacheH = r * (0.11 + look.stache * 0.04)
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.24, r * 0.28, r * 0.3, r * 0.13, -0.28, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.24, r * 0.28, stacheW, stacheH, -0.28, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.24, r * 0.28, r * 0.3, r * 0.13, 0.28, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.24, r * 0.28, stacheW, stacheH, 0.28, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.strokeStyle = ink

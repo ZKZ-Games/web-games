@@ -135,6 +135,32 @@ export function living(s: State) {
   return s.uncles.filter((u) => u.live)
 }
 
+export type Traits = {
+  skin: number
+  hair: number
+  stache: number
+  brow: number
+  scale: number
+  tilt: number
+  collar: number
+}
+
+export function traits(id: number): Traits {
+  const unit = (n: number) => {
+    const x = Math.sin(id * 17.13 + n * 43.77) * 1453.21
+    return x - Math.floor(x)
+  }
+  return {
+    skin: unit(1),
+    hair: unit(2),
+    stache: unit(3),
+    brow: unit(4),
+    scale: 0.93 + unit(5) * 0.1,
+    tilt: (unit(6) - 0.5) * 0.12,
+    collar: unit(7),
+  }
+}
+
 export function layout(width: number, height: number): Layout {
   const top = Math.min(118, Math.max(86, height * 0.17))
   const foot = Math.min(70, Math.max(48, height * 0.1))
@@ -155,35 +181,28 @@ export function layout(width: number, height: number): Layout {
   }
 }
 
-export function packSlots(count: number, box: Box) {
-  const n = Math.max(1, count)
-  const cols = Math.max(1, Math.ceil(Math.sqrt(n)))
-  const rows = Math.max(1, Math.ceil(n / cols))
-  const inset = Math.min(box.w, box.h) * 0.07
+export function packSlots(box: Box) {
+  const cols = 5
+  const inset = Math.min(box.w, box.h) * 0.05
   const inner = {
     x: box.x + inset,
     y: box.y + inset,
     w: box.w - inset * 2,
     h: box.h - inset * 2,
   }
-  const gap = Math.min(inner.w, inner.h) * 0.03
-  const cell = Math.min(
-    (inner.w - gap * (cols - 1)) / cols,
-    (inner.h - gap * (rows - 1)) / rows,
-  )
-  const gridH = rows * cell + (rows - 1) * gap
-  const oy = inner.y + (inner.h - gridH) / 2
+  const gap = Math.min(inner.w, inner.h) * 0.012
+  const cell = Math.min((inner.w - gap * 4) / cols, (inner.h - gap * 4) / cols)
+  const grid = cols * cell + (cols - 1) * gap
+  const ox = inner.x + (inner.w - grid) / 2
+  const oy = inner.y + (inner.h - grid) / 2
   const slots: { x: number; y: number; r: number; cell: number }[] = []
-  for (let i = 0; i < n; i++) {
-    const row = Math.floor(i / cols)
+  for (let i = 0; i < FACE_COUNT; i++) {
     const col = i % cols
-    const inRow = row === rows - 1 ? n - row * cols : cols
-    const rowW = inRow * cell + (inRow - 1) * gap
-    const ox = inner.x + (inner.w - rowW) / 2
+    const row = Math.floor(i / cols)
     slots.push({
       x: ox + col * (cell + gap) + cell / 2,
       y: oy + row * (cell + gap) + cell / 2,
-      r: cell * 0.4,
+      r: cell * 0.46,
       cell,
     })
   }
@@ -191,11 +210,9 @@ export function packSlots(count: number, box: Box) {
 }
 
 export function assignPack(s: State, box: Box, snap = false) {
-  const live = living(s)
-  const slots = packSlots(live.length, box)
-  for (let i = 0; i < live.length; i++) {
-    const u = live[i]
-    const p = slots[i]
+  const slots = packSlots(box)
+  for (const u of s.uncles) {
+    const p = slots[u.id]
     u.tx = p.x
     u.ty = p.y
     u.tr = p.r
@@ -238,10 +255,10 @@ export function tapUncle(s: State, u: Uncle) {
     return
   }
   u.live = false
-  u.fly = 0.85
-  u.vx = (Math.random() - 0.5) * 420
-  u.vy = -380 - Math.random() * 160
-  u.spin = (Math.random() - 0.5) * 10
+  u.fly = 0.55
+  u.vx = (Math.random() - 0.5) * 520
+  u.vy = -520 - Math.random() * 120
+  u.spin = (Math.random() - 0.5) * 12
   const line = pickLine(s.lastLine)
   s.lastLine = line
   s.floaters.push({ x: u.x, y: u.y, r: u.r, text: line, life: 2.1, angry: false })
