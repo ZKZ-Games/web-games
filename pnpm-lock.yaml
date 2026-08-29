@@ -30,6 +30,19 @@ importers:
         specifier: ^6.0.6
         version: 6.4.3
 
+  games/angry-ojisan:
+    dependencies:
+      '@web-games/kit':
+        specifier: workspace:*
+        version: link:../../packages/kit
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.6
+        version: 6.4.3
+
   games/playground:
     dependencies:
       '@web-games/kit':
