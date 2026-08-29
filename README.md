@@ -6,6 +6,8 @@ Orbit is the first game: hold, aim, release, land on pads.
 
 TubeEmpire is the bedroom tap-clicker: mash TAP, buy skills for audience/s, hit 1,000 subs.
 
+Smile Tac Toe is hot-seat tic-tac-toe: two people take turns tapping smiles, three in a row wins.
+
 ## Setup
 
 Node 22+ and pnpm 9+. From the repo root, pnpm install.
@@ -17,6 +19,8 @@ pnpm dev launches Orbit (the playground). Hold to charge, aim with the pointer, 
 Same thing: pnpm --filter playground dev
 
 Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy Personality, grow to 1,000 subs.
+
+Smile Tac Toe: pnpm --filter smile-tac-toe dev — take turns tapping smiles. Yellow then pink, same laptop. First to three in a row wins. Tap the board to play again (same colors).
 
 ## New title
 
