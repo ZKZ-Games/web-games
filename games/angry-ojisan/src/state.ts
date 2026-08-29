@@ -244,7 +244,7 @@ export function tapUncle(s: State, u: Uncle) {
   u.spin = (Math.random() - 0.5) * 10
   const line = pickLine(s.lastLine)
   s.lastLine = line
-  s.floaters.push({ x: u.x, y: u.y, r: u.r, text: line, life: 1.35, angry: false })
+  s.floaters.push({ x: u.x, y: u.y, r: u.r, text: line, life: 2.1, angry: false })
 }
 
 export function resetRound(s: State, box: Box) {

@@ -287,17 +287,17 @@ function drawBubble(
   angry: boolean,
 ) {
   ctx.save()
-  ctx.font = `700 ${Math.max(12, Math.min(18, r * 0.42))}px ui-sans-serif, system-ui, sans-serif`
+  ctx.font = `800 ${Math.max(16, Math.min(22, r * 0.55))}px ui-sans-serif, system-ui, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  const padX = 10
-  const w = Math.max(64, ctx.measureText(text).width + padX * 2)
-  const h = Math.max(26, r * 0.55)
+  const padX = 12
+  const w = Math.max(72, ctx.measureText(text).width + padX * 2)
+  const h = Math.max(32, r * 0.7)
   const bx = x
-  const by = y - r - h * 0.7
+  const by = y - r - h * 0.85
   ctx.fillStyle = angry ? '#fff1e8' : '#fffaf0'
   ctx.strokeStyle = angry ? '#8a2018' : CRATE_INK
-  ctx.lineWidth = 2
+  ctx.lineWidth = 3
   roundRect(ctx, bx - w / 2, by - h / 2, w, h, 10)
   ctx.fill()
   ctx.stroke()
