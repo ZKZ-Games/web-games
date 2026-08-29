@@ -23,8 +23,15 @@ export type Uncle = {
   vy: number
   spin: number
   angle: number
-  line: string | null
-  lineT: number
+}
+
+export type Floater = {
+  x: number
+  y: number
+  r: number
+  text: string
+  life: number
+  angry: boolean
 }
 
 export type State = {
@@ -35,6 +42,7 @@ export type State = {
   yell: number
   shake: number
   lastLine: string
+  floaters: Floater[]
 }
 
 export type Layout = {
@@ -87,6 +95,7 @@ export function createState(): State {
     yell: 0,
     shake: 0,
     lastLine: '',
+    floaters: [],
   }
   deal(s)
   return s
@@ -113,14 +122,13 @@ export function deal(s: State) {
       vy: 0,
       spin: 0,
       angle: 0,
-      line: null,
-      lineT: 0,
     })
   }
   s.phase = 'play'
   s.overAge = 0
   s.yell = 0
   s.shake = 0
+  s.floaters = []
 }
 
 export function living(s: State) {
@@ -226,8 +234,7 @@ export function tapUncle(s: State, u: Uncle) {
     s.overAge = 0
     s.yell = 1
     s.shake = 1
-    u.line = ANGRY_YELL
-    u.lineT = 2.4
+    s.floaters.push({ x: u.x, y: u.y, r: u.r, text: ANGRY_YELL, life: 2.4, angry: true })
     return
   }
   u.live = false
@@ -237,8 +244,7 @@ export function tapUncle(s: State, u: Uncle) {
   u.spin = (Math.random() - 0.5) * 10
   const line = pickLine(s.lastLine)
   s.lastLine = line
-  u.line = line
-  u.lineT = 0.85
+  s.floaters.push({ x: u.x, y: u.y, r: u.r, text: line, life: 1.35, angry: false })
 }
 
 export function resetRound(s: State, box: Box) {
@@ -267,6 +273,7 @@ export function tick(s: State, dt: number, box: Box) {
       u.cell = lerp(u.cell, u.tcell, ease)
       u.angle *= Math.max(0, 1 - dt * 8)
     }
-    if (u.lineT > 0) u.lineT -= dt
   }
+  for (const f of s.floaters) f.life -= dt
+  s.floaters = s.floaters.filter((f) => f.life > 0)
 }

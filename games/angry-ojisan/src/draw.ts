@@ -365,13 +365,12 @@ export function drawGame(view: CanvasApp, s: State, L: Layout, hoverId: number) 
       hover: hoverId === u.id && s.phase === 'play',
       time: s.time,
     })
-    if (u.lineT > 0 && u.line) {
-      drawBubble(ctx, u.x, u.y, u.line, u.r, u.angry && s.phase === 'over')
-    }
   }
   for (const u of flyers) {
     drawOjisan(ctx, u, { angry: false, hover: false, time: s.time })
-    if (u.lineT > 0 && u.line) drawBubble(ctx, u.x, u.y, u.line, u.r, false)
+  }
+  for (const f of s.floaters) {
+    drawBubble(ctx, f.x, f.y, f.text, f.r, f.angry)
   }
   drawHud(ctx, s, L)
   ctx.restore()
