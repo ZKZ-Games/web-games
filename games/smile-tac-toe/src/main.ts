@@ -43,6 +43,7 @@ let mode: Mode = 'play'
 let winner: Mark = 0
 let winLine: readonly [number, number, number] | null = null
 let time = 0
+let overAge = 0
 
 function palette(mark: 1 | 2) {
   return mark === 1 ? YELLOW : PINK
@@ -57,6 +58,7 @@ function reset() {
   mode = 'play'
   winner = 0
   winLine = null
+  overAge = 0
 }
 
 function winnerOf(cells: Mark[]): {
@@ -112,12 +114,14 @@ function place(i: number) {
     mode = 'over'
     winner = result.mark
     winLine = result.line
+    overAge = 0
     return
   }
   if (boardFull(board)) {
     mode = 'over'
     winner = 0
     winLine = null
+    overAge = 0
     return
   }
   turn = turn === 1 ? 2 : 1
@@ -130,36 +134,48 @@ function drawSmile(
   r: number,
   mark: 1 | 2,
   bounce = 0,
+  lit = false,
 ) {
   const p = palette(mark)
-  const squish = 1 + bounce * 0.12
+  const scale = 1 + bounce * 0.22 + (lit ? 0.08 + Math.sin(time * 7) * 0.04 : 0)
   ctx.save()
   ctx.translate(x, y)
-  ctx.scale(squish, 1 / Math.sqrt(squish))
-  ctx.fillStyle = p.face
+  ctx.scale(scale, scale)
+  if (lit) {
+    ctx.shadowColor = p.face
+    ctx.shadowBlur = r * 1.1
+  }
+  ctx.fillStyle = lit ? (mark === 1 ? '#fff3b0' : '#ffd0e4') : p.face
   ctx.beginPath()
   ctx.arc(0, 0, r, 0, Math.PI * 2)
   ctx.fill()
+  ctx.shadowBlur = 0
   ctx.strokeStyle = p.rim
   ctx.lineWidth = Math.max(2, r * 0.08)
   ctx.stroke()
-  ctx.fillStyle = p.blush
-  ctx.globalAlpha = 0.55
-  ctx.beginPath()
-  ctx.ellipse(-r * 0.42, r * 0.18, r * 0.16, r * 0.1, 0, 0, Math.PI * 2)
-  ctx.ellipse(r * 0.42, r * 0.18, r * 0.16, r * 0.1, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.globalAlpha = 1
   ctx.fillStyle = p.ink
-  ctx.beginPath()
-  ctx.arc(-r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2)
-  ctx.arc(r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2)
-  ctx.fill()
+  if (mark === 1) {
+    ctx.beginPath()
+    ctx.arc(-r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2)
+    ctx.arc(r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2)
+    ctx.fill()
+  } else {
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = p.ink
+    ctx.lineWidth = Math.max(2, r * 0.1)
+    ctx.beginPath()
+    ctx.arc(-r * 0.28, -r * 0.1, r * 0.12, 1.15 * Math.PI, 1.85 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(r * 0.28, -r * 0.12, r * 0.1, 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.strokeStyle = p.ink
   ctx.lineWidth = Math.max(2, r * 0.1)
   ctx.lineCap = 'round'
   ctx.beginPath()
-  ctx.arc(0, r * 0.06, r * 0.42, 0.18 * Math.PI, 0.82 * Math.PI)
+  if (mark === 1) ctx.arc(0, r * 0.06, r * 0.42, 0.18 * Math.PI, 0.82 * Math.PI)
+  else ctx.arc(0, r * 0.02, r * 0.48, 0.12 * Math.PI, 0.88 * Math.PI)
   ctx.stroke()
   ctx.restore()
 }
@@ -191,24 +207,9 @@ function drawBoard(L: ReturnType<typeof layout>) {
     ctx.stroke()
     const mark = board[i]
     if (mark !== 0) {
-      drawSmile(ctx, x + L.cell / 2, y + L.cell / 2, L.cell * 0.28, mark, pop[i])
+      const lit = !!winLine && winLine.includes(i)
+      drawSmile(ctx, x + L.cell / 2, y + L.cell / 2, L.cell * 0.28, mark, pop[i], lit)
     }
-  }
-
-  if (winLine) {
-    const a = winLine[0]
-    const b = winLine[2]
-    const ax = L.ox + (a % 3) * L.cell + L.cell / 2
-    const ay = L.oy + Math.floor(a / 3) * L.cell + L.cell / 2
-    const bx = L.ox + (b % 3) * L.cell + L.cell / 2
-    const by = L.oy + Math.floor(b / 3) * L.cell + L.cell / 2
-    ctx.strokeStyle = winner === 1 ? '#e6a800' : '#e0488a'
-    ctx.lineWidth = Math.max(8, L.cell * 0.1)
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(bx, by)
-    ctx.stroke()
   }
   ctx.restore()
 }
@@ -241,8 +242,7 @@ function drawHud(L: ReturnType<typeof layout>) {
 
   if (mode === 'play') {
     const p = palette(turn)
-    const bounce = (Math.sin(time * 6) + 1) * 0.5
-    drawSmile(ctx, L.width / 2 - 92, L.turnY, 16, turn, bounce)
+    drawSmile(ctx, L.width / 2 - 88, L.turnY, 15, turn, 0)
     ctx.fillStyle = p.ink
     ctx.font = `700 ${Math.round(Math.min(22, L.width * 0.045))}px ui-sans-serif, system-ui, sans-serif`
     ctx.fillText(`${p.label}'s turn  ·  tap a cell`, L.width / 2 + 18, L.turnY)
@@ -250,26 +250,31 @@ function drawHud(L: ReturnType<typeof layout>) {
     ctx.font = '600 15px ui-sans-serif, system-ui, sans-serif'
     ctx.fillText('take turns tapping smiles  ·  three in a row', L.width / 2, L.footY)
   } else {
-    const headline = winner === 0 ? 'Draw!' : `${palette(winner).label} wins!`
-    ctx.fillStyle = winner === 0 ? '#3d2b1f' : palette(winner).ink
-    ctx.font = `800 ${Math.round(Math.min(44, L.width * 0.08))}px ui-rounded, ui-sans-serif, system-ui, sans-serif`
-    ctx.fillText(headline, L.width / 2, L.footY - 16)
     ctx.fillStyle = '#8a6a4a'
-    ctx.font = '700 18px ui-sans-serif, system-ui, sans-serif'
-    ctx.fillText('tap to play again', L.width / 2, L.footY + 16)
+    ctx.font = '600 16px ui-sans-serif, system-ui, sans-serif'
+    const ready = overAge > 0.45
+    const line =
+      winner === 0
+        ? ready
+          ? 'draw  ·  tap the board'
+          : 'draw'
+        : ready
+          ? 'tap the board'
+          : ''
+    if (line) ctx.fillText(line, L.width / 2, L.footY)
   }
 }
 
 const loop = createLoop((dt) => {
   time += dt
-  for (let i = 0; i < 9; i++) pop[i] = Math.max(0, pop[i] - dt * 3.2)
+  if (mode === 'over') overAge += dt
+  for (let i = 0; i < 9; i++) pop[i] = Math.max(0, pop[i] - dt * 4.5)
 
   if (input.pointer.pressed) {
-    if (mode === 'over') reset()
-    else {
-      const i = cellAt(input.pointer.x, input.pointer.y)
-      if (i >= 0) place(i)
-    }
+    const i = cellAt(input.pointer.x, input.pointer.y)
+    if (mode === 'over') {
+      if (overAge > 0.45 && i >= 0) reset()
+    } else if (i >= 0) place(i)
   }
 
   view.clear()

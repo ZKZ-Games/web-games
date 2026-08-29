@@ -20,7 +20,7 @@ Same thing: pnpm --filter playground dev
 
 Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy Personality, grow to 1,000 subs.
 
-Smile Tac Toe: pnpm --filter smile-tac-toe dev — take turns tapping smiles. Yellow then pink, same laptop. First to three in a row wins. Tap to play again (same colors).
+Smile Tac Toe: pnpm --filter smile-tac-toe dev — take turns tapping smiles. Yellow then pink, same laptop. First to three in a row wins. Tap the board to play again (same colors).
 
 ## New title
 
