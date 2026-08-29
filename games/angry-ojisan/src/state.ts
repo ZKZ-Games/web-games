@@ -1,0 +1,272 @@
+import { lerp } from '@web-games/kit'
+
+export const FACE_COUNT = 25
+
+export type Phase = 'play' | 'over'
+
+export type Box = { x: number; y: number; w: number; h: number }
+
+export type Uncle = {
+  id: number
+  angry: boolean
+  live: boolean
+  x: number
+  y: number
+  r: number
+  cell: number
+  tx: number
+  ty: number
+  tr: number
+  tcell: number
+  fly: number
+  vx: number
+  vy: number
+  spin: number
+  angle: number
+  line: string | null
+  lineT: number
+}
+
+export type State = {
+  uncles: Uncle[]
+  phase: Phase
+  overAge: number
+  time: number
+  yell: number
+  shake: number
+  lastLine: string
+}
+
+export type Layout = {
+  width: number
+  height: number
+  box: Box
+  titleY: number
+  subY: number
+  footY: number
+}
+
+const SAFE_LINES = [
+  'Hmph.',
+  'Watch it.',
+  'Not the scalp.',
+  "I'm fine.",
+  'Back in my day.',
+  'Buy property.',
+  "That's my good side.",
+  'Kids these days.',
+  "Don't tell your aunt.",
+  "I wasn't sleeping.",
+  'Who raised you?',
+  'My lawn. My rules.',
+  'Ask your mother.',
+  'I paid for that.',
+  'Hands off the dome.',
+  'Easy, tiger.',
+  'I just sat down.',
+  'Call me uncle.',
+]
+
+export const ANGRY_YELL = "OY!! THAT'S ME!!"
+
+function pickLine(last: string) {
+  if (SAFE_LINES.length === 1) return SAFE_LINES[0]
+  let line = SAFE_LINES[Math.floor(Math.random() * SAFE_LINES.length)]
+  if (line === last) {
+    line = SAFE_LINES[(SAFE_LINES.indexOf(line) + 1) % SAFE_LINES.length]
+  }
+  return line
+}
+
+export function createState(): State {
+  const s: State = {
+    uncles: [],
+    phase: 'play',
+    overAge: 0,
+    time: 0,
+    yell: 0,
+    shake: 0,
+    lastLine: '',
+  }
+  deal(s)
+  return s
+}
+
+export function deal(s: State) {
+  const angry = Math.floor(Math.random() * FACE_COUNT)
+  s.uncles = []
+  for (let i = 0; i < FACE_COUNT; i++) {
+    s.uncles.push({
+      id: i,
+      angry: i === angry,
+      live: true,
+      x: 0,
+      y: 0,
+      r: 20,
+      cell: 40,
+      tx: 0,
+      ty: 0,
+      tr: 20,
+      tcell: 40,
+      fly: 0,
+      vx: 0,
+      vy: 0,
+      spin: 0,
+      angle: 0,
+      line: null,
+      lineT: 0,
+    })
+  }
+  s.phase = 'play'
+  s.overAge = 0
+  s.yell = 0
+  s.shake = 0
+}
+
+export function living(s: State) {
+  return s.uncles.filter((u) => u.live)
+}
+
+export function layout(width: number, height: number): Layout {
+  const top = Math.min(118, Math.max(86, height * 0.17))
+  const foot = Math.min(70, Math.max(48, height * 0.1))
+  const pad = Math.min(width, height) * 0.045
+  const side = Math.min(width - pad * 2, height - top - foot)
+  return {
+    width,
+    height,
+    box: {
+      x: (width - side) / 2,
+      y: top + (height - top - foot - side) / 2,
+      w: side,
+      h: side,
+    },
+    titleY: Math.max(36, top * 0.42),
+    subY: Math.max(58, top * 0.72),
+    footY: height - Math.max(22, foot * 0.42),
+  }
+}
+
+export function packSlots(count: number, box: Box) {
+  const n = Math.max(1, count)
+  const cols = Math.max(1, Math.ceil(Math.sqrt(n)))
+  const rows = Math.max(1, Math.ceil(n / cols))
+  const inset = Math.min(box.w, box.h) * 0.07
+  const inner = {
+    x: box.x + inset,
+    y: box.y + inset,
+    w: box.w - inset * 2,
+    h: box.h - inset * 2,
+  }
+  const gap = Math.min(inner.w, inner.h) * 0.03
+  const cell = Math.min(
+    (inner.w - gap * (cols - 1)) / cols,
+    (inner.h - gap * (rows - 1)) / rows,
+  )
+  const gridH = rows * cell + (rows - 1) * gap
+  const oy = inner.y + (inner.h - gridH) / 2
+  const slots: { x: number; y: number; r: number; cell: number }[] = []
+  for (let i = 0; i < n; i++) {
+    const row = Math.floor(i / cols)
+    const col = i % cols
+    const inRow = row === rows - 1 ? n - row * cols : cols
+    const rowW = inRow * cell + (inRow - 1) * gap
+    const ox = inner.x + (inner.w - rowW) / 2
+    slots.push({
+      x: ox + col * (cell + gap) + cell / 2,
+      y: oy + row * (cell + gap) + cell / 2,
+      r: cell * 0.4,
+      cell,
+    })
+  }
+  return slots
+}
+
+export function assignPack(s: State, box: Box, snap = false) {
+  const live = living(s)
+  const slots = packSlots(live.length, box)
+  for (let i = 0; i < live.length; i++) {
+    const u = live[i]
+    const p = slots[i]
+    u.tx = p.x
+    u.ty = p.y
+    u.tr = p.r
+    u.tcell = p.cell
+    if (snap) {
+      u.x = p.x
+      u.y = p.y
+      u.r = p.r
+      u.cell = p.cell
+    }
+  }
+}
+
+export function hitUncle(s: State, x: number, y: number) {
+  let best: Uncle | null = null
+  let bestD = Infinity
+  for (const u of living(s)) {
+    const reach = u.cell * 0.5
+    const d = Math.hypot(x - u.x, y - u.y)
+    if (d <= reach && d < bestD) {
+      best = u
+      bestD = d
+    }
+  }
+  return best
+}
+
+export function inBox(box: Box, x: number, y: number) {
+  return x >= box.x && y >= box.y && x <= box.x + box.w && y <= box.y + box.h
+}
+
+export function tapUncle(s: State, u: Uncle) {
+  if (s.phase !== 'play' || !u.live) return
+  if (u.angry) {
+    s.phase = 'over'
+    s.overAge = 0
+    s.yell = 1
+    s.shake = 1
+    u.line = ANGRY_YELL
+    u.lineT = 2.4
+    return
+  }
+  u.live = false
+  u.fly = 0.85
+  u.vx = (Math.random() - 0.5) * 420
+  u.vy = -380 - Math.random() * 160
+  u.spin = (Math.random() - 0.5) * 10
+  const line = pickLine(s.lastLine)
+  s.lastLine = line
+  u.line = line
+  u.lineT = 0.85
+}
+
+export function resetRound(s: State, box: Box) {
+  deal(s)
+  assignPack(s, box, true)
+}
+
+export function tick(s: State, dt: number, box: Box) {
+  s.time += dt
+  if (s.phase === 'over') s.overAge += dt
+  s.yell = Math.max(0, s.yell - dt * 1.6)
+  s.shake = Math.max(0, s.shake - dt * 3.2)
+  assignPack(s, box, false)
+  const ease = 1 - Math.pow(0.0008, dt)
+  for (const u of s.uncles) {
+    if (u.fly > 0) {
+      u.fly -= dt
+      u.x += u.vx * dt
+      u.y += u.vy * dt
+      u.vy += 980 * dt
+      u.angle += u.spin * dt
+    } else if (u.live) {
+      u.x = lerp(u.x, u.tx, ease)
+      u.y = lerp(u.y, u.ty, ease)
+      u.r = lerp(u.r, u.tr, ease)
+      u.cell = lerp(u.cell, u.tcell, ease)
+      u.angle *= Math.max(0, 1 - dt * 8)
+    }
+    if (u.lineT > 0) u.lineT -= dt
+  }
+}

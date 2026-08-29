@@ -8,6 +8,8 @@ TubeEmpire is the bedroom tap-clicker: mash TAP, buy skills for audience/s, hit 
 
 Smile Tac Toe is hot-seat tic-tac-toe: two people take turns tapping smiles, three in a row wins.
 
+Angry Ojisan is pass-the-phone party roulette: a packed box of twenty-five canvas uncles, one secretly angry. Tap a safe face and he flies off. Tap the angry one and you lose.
+
 ## Setup
 
 Node 22+ and pnpm 9+. From the repo root, pnpm install.
@@ -21,6 +23,8 @@ Same thing: pnpm --filter playground dev
 Bedroom clicker: pnpm --filter tube-empire dev — mash TAP, buy Personality, grow to 1,000 subs.
 
 Smile Tac Toe: pnpm --filter smile-tac-toe dev — take turns tapping smiles. Yellow then pink, same laptop. First to three in a row wins. Tap the board to play again (same colors).
+
+Angry Ojisan: pnpm --filter angry-ojisan dev — pass the phone, tap uncles in the box, don't tap the angry one. Roulette: one hidden loser among 25 faces. Tap the box to play again.
 
 ## New title
 
