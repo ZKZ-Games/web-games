@@ -289,9 +289,9 @@ export function tapUncle(s: State, u: Uncle) {
   s.lastLine = line
   s.floaters.push({
     x: u.x,
-    y: u.y,
+    y: u.y - u.r * 1.55,
     vx: u.vx,
-    vy: u.vy - 90,
+    vy: u.vy - 40,
     r: u.r,
     text: line,
     life: SAFE_BUBBLE_LIFE,

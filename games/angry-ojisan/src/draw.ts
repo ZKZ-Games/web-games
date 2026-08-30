@@ -152,9 +152,15 @@ function easeOutBack(t: number) {
 }
 
 function pathHead(ctx: CanvasRenderingContext2D, r: number, jaw: number) {
-  const w = r * (1.76 + jaw * 0.1)
-  const h = r * 1.98
-  roundRect(ctx, -w / 2, -r * 0.88, w, h, r * 0.44)
+  const jw = r * (0.88 + jaw * 0.08)
+  ctx.beginPath()
+  ctx.moveTo(-jw, -r * 0.12)
+  ctx.bezierCurveTo(-jw, -r * 0.72, -r * 0.42, -r * 0.94, 0, -r * 0.94)
+  ctx.bezierCurveTo(r * 0.42, -r * 0.94, jw, -r * 0.72, jw, -r * 0.12)
+  ctx.lineTo(jw, r * 0.52)
+  ctx.quadraticCurveTo(jw, r * 1.08, 0, r * 1.1)
+  ctx.quadraticCurveTo(-jw, r * 1.08, -jw, r * 0.52)
+  ctx.closePath()
 }
 
 export function drawOjisan(
@@ -194,21 +200,21 @@ export function drawOjisan(
 
   ctx.fillStyle = shirt
   ctx.beginPath()
-  ctx.ellipse(0, r * 1.08, r * 0.78, r * 0.3, 0, 0, Math.PI * 2)
+  ctx.ellipse(0, r * 1.2, r * 0.82, r * 0.32, 0, 0, Math.PI * 2)
   ctx.fill()
   ctx.fillStyle = opts.angry ? '#f0e6d4' : '#f3ead8'
   ctx.beginPath()
-  ctx.moveTo(-r * 0.4, r * 0.82)
-  ctx.lineTo(-r * 0.16, r * 1.16)
-  ctx.lineTo(r * 0.16, r * 1.16)
-  ctx.lineTo(r * 0.4, r * 0.82)
+  ctx.moveTo(-r * 0.38, r * 0.95)
+  ctx.lineTo(-r * 0.15, r * 1.28)
+  ctx.lineTo(r * 0.15, r * 1.28)
+  ctx.lineTo(r * 0.38, r * 0.95)
   ctx.closePath()
   ctx.fill()
 
   ctx.fillStyle = skinDeep
   ctx.beginPath()
-  ctx.ellipse(-r * 0.86, r * 0.12, r * 0.16, r * 0.24, 0.12, 0, Math.PI * 2)
-  ctx.ellipse(r * 0.86, r * 0.12, r * 0.16, r * 0.24, -0.12, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.9, r * 0.08, r * 0.15, r * 0.22, 0.1, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.9, r * 0.08, r * 0.15, r * 0.22, -0.1, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.fillStyle = skin
@@ -222,155 +228,150 @@ export function drawOjisan(
   ctx.lineWidth = Math.max(1.5, r * 0.055)
   ctx.stroke()
 
-  const hairTop = -r * (0.12 + look.hair * 0.28)
-  const hairW = r * (0.24 + look.hair * 0.1)
+  const peak = -r * (0.22 + look.hair * 0.22)
   ctx.save()
   pathHead(ctx, r, look.jaw)
   ctx.clip()
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.72, r * 0.18, hairW, r * (0.62 + look.hair * 0.12), 0.22, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.ellipse(r * 0.72, r * 0.18, hairW, r * (0.62 + look.hair * 0.12), -0.22, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.ellipse(-r * 0.7, r * 0.88, r * 0.3, r * 0.22, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.ellipse(r * 0.7, r * 0.88, r * 0.3, r * 0.22, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.moveTo(-r * 0.98, r * 0.2)
-  ctx.quadraticCurveTo(-r * 0.88, hairTop, -r * 0.52, hairTop + r * 0.08)
-  ctx.lineTo(-r * 0.48, r * 0.55)
-  ctx.lineTo(-r * 1.05, r * 0.55)
+  ctx.moveTo(-r * 1.1, r * 0.15)
+  ctx.lineTo(-r * 1.1, peak)
+  ctx.quadraticCurveTo(-r * 0.78, peak - r * 0.18, -r * 0.5, peak + r * 0.06)
+  ctx.quadraticCurveTo(-r * 0.42, r * 0.08, -r * 0.5, r * 0.62)
+  ctx.lineTo(-r * 1.1, r * 0.72)
   ctx.closePath()
   ctx.fill()
   ctx.beginPath()
-  ctx.moveTo(r * 0.98, r * 0.2)
-  ctx.quadraticCurveTo(r * 0.88, hairTop, r * 0.52, hairTop + r * 0.08)
-  ctx.lineTo(r * 0.48, r * 0.55)
-  ctx.lineTo(r * 1.05, r * 0.55)
+  ctx.moveTo(r * 1.1, r * 0.15)
+  ctx.lineTo(r * 1.1, peak)
+  ctx.quadraticCurveTo(r * 0.78, peak - r * 0.18, r * 0.5, peak + r * 0.06)
+  ctx.quadraticCurveTo(r * 0.42, r * 0.08, r * 0.5, r * 0.62)
+  ctx.lineTo(r * 1.1, r * 0.72)
   ctx.closePath()
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(-r * 0.72, r * 0.95, r * 0.28, r * 0.18, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(r * 0.72, r * 0.95, r * 0.28, r * 0.18, 0, 0, Math.PI * 2)
   ctx.fill()
   ctx.fillStyle = 'rgba(255,255,255,0.22)'
   ctx.beginPath()
-  ctx.ellipse(-r * 0.14, -r * 0.42, r * 0.2, r * 0.08, -0.35, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.1, -r * 0.48, r * 0.2, r * 0.08, -0.28, 0, Math.PI * 2)
   ctx.fill()
   ctx.restore()
 
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.78, r * 0.28, r * 0.16, r * 0.28, 0.18, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.78, r * 0.36, r * 0.15, r * 0.24, 0.28, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.78, r * 0.28, r * 0.16, r * 0.28, -0.18, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.78, r * 0.36, r * 0.15, r * 0.24, -0.28, 0, Math.PI * 2)
   ctx.fill()
 
-  const browY = -r * (0.02 + look.brow * 0.03)
+  const browY = -r * (0.12 + look.brow * 0.04)
   ctx.strokeStyle = ink
   ctx.fillStyle = ink
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.lineWidth = Math.max(3.2, r * (0.13 + look.brow * 0.04))
+  ctx.lineWidth = Math.max(3.8, r * (0.145 + look.brow * 0.03))
   if (opts.angry) {
     ctx.beginPath()
-    ctx.moveTo(-r * 0.4, browY - r * 0.1)
-    ctx.lineTo(-r * 0.05, browY + r * 0.06)
-    ctx.moveTo(r * 0.4, browY - r * 0.1)
-    ctx.lineTo(r * 0.05, browY + r * 0.06)
+    ctx.moveTo(-r * 0.38, browY - r * 0.04)
+    ctx.lineTo(-r * 0.06, browY + r * 0.1)
+    ctx.moveTo(r * 0.38, browY - r * 0.04)
+    ctx.lineTo(r * 0.06, browY + r * 0.1)
     ctx.stroke()
   } else {
     ctx.beginPath()
-    ctx.moveTo(-r * 0.4, browY)
-    ctx.lineTo(-r * 0.06, browY + r * 0.05)
-    ctx.moveTo(r * 0.4, browY)
-    ctx.lineTo(r * 0.06, browY + r * 0.05)
+    ctx.moveTo(-r * 0.36, browY)
+    ctx.lineTo(-r * 0.07, browY + r * 0.07)
+    ctx.moveTo(r * 0.36, browY)
+    ctx.lineTo(r * 0.07, browY + r * 0.07)
     ctx.stroke()
   }
 
   ctx.fillStyle = ink
   if (opts.angry) {
     ctx.beginPath()
-    ctx.ellipse(-r * 0.2, r * 0.08, r * 0.11, r * 0.13, 0, 0, Math.PI * 2)
-    ctx.ellipse(r * 0.2, r * 0.08, r * 0.11, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.ellipse(-r * 0.18, r * 0.06, r * 0.1, r * 0.12, 0, 0, Math.PI * 2)
+    ctx.ellipse(r * 0.18, r * 0.06, r * 0.1, r * 0.12, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#fff6ea'
     ctx.beginPath()
-    ctx.ellipse(-r * 0.17, r * 0.03, r * 0.04, r * 0.045, 0, 0, Math.PI * 2)
-    ctx.ellipse(r * 0.23, r * 0.03, r * 0.04, r * 0.045, 0, 0, Math.PI * 2)
+    ctx.ellipse(-r * 0.15, r * 0.01, r * 0.038, r * 0.042, 0, 0, Math.PI * 2)
+    ctx.ellipse(r * 0.21, r * 0.01, r * 0.038, r * 0.042, 0, 0, Math.PI * 2)
     ctx.fill()
   } else {
     ctx.beginPath()
-    ctx.arc(-r * 0.2, r * 0.08, r * 0.072, 0, Math.PI * 2)
-    ctx.arc(r * 0.2, r * 0.08, r * 0.072, 0, Math.PI * 2)
+    ctx.arc(-r * 0.18, r * 0.06, Math.max(2.2, r * 0.07), 0, Math.PI * 2)
+    ctx.arc(r * 0.18, r * 0.06, Math.max(2.2, r * 0.07), 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#fff8ee'
     ctx.beginPath()
-    ctx.arc(-r * 0.175, r * 0.055, r * 0.022, 0, Math.PI * 2)
-    ctx.arc(r * 0.225, r * 0.055, r * 0.022, 0, Math.PI * 2)
+    ctx.arc(-r * 0.155, r * 0.038, Math.max(1, r * 0.022), 0, Math.PI * 2)
+    ctx.arc(r * 0.205, r * 0.038, Math.max(1, r * 0.022), 0, Math.PI * 2)
     ctx.fill()
   }
 
   ctx.fillStyle = skinDeep
   ctx.beginPath()
-  ctx.moveTo(0, r * 0.02)
-  ctx.lineTo(-r * 0.07, r * 0.2)
-  ctx.lineTo(r * 0.07, r * 0.2)
+  ctx.moveTo(0, r * 0.1)
+  ctx.lineTo(-r * 0.065, r * 0.24)
+  ctx.lineTo(r * 0.065, r * 0.24)
   ctx.closePath()
   ctx.fill()
 
-  const stacheW = r * (0.34 + look.stache * 0.08)
-  const stacheH = r * (0.14 + look.stache * 0.05)
+  const stacheW = r * (0.36 + look.stache * 0.08)
+  const stacheH = r * (0.13 + look.stache * 0.04)
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.3, r * 0.3, stacheW, stacheH, -0.22, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.42, r * 0.34, stacheW, stacheH, -0.38, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.3, r * 0.3, stacheW, stacheH, 0.22, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.42, r * 0.34, stacheW, stacheH, 0.38, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(0, r * 0.28, r * 0.2, r * 0.08, 0, 0, Math.PI * 2)
+  ctx.ellipse(0, r * 0.31, r * 0.18, r * 0.075, 0, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.strokeStyle = ink
-  ctx.lineWidth = Math.max(2, r * 0.085)
+  ctx.lineWidth = Math.max(2.6, r * 0.095)
   ctx.lineCap = 'round'
   if (opts.angry) {
     ctx.fillStyle = '#2a0808'
     ctx.beginPath()
-    ctx.ellipse(0, r * 0.52, r * 0.26, r * 0.2, 0, 0, Math.PI * 2)
+    ctx.ellipse(0, r * 0.54, r * 0.24, r * 0.18, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#f2d2c4'
     ctx.beginPath()
-    ctx.ellipse(0, r * 0.58, r * 0.16, r * 0.09, 0, 0, Math.PI * 2)
+    ctx.ellipse(0, r * 0.59, r * 0.15, r * 0.08, 0, 0, Math.PI * 2)
     ctx.fill()
   } else {
     ctx.beginPath()
-    ctx.moveTo(-r * 0.12, r * 0.46)
-    ctx.quadraticCurveTo(0, r * 0.54, r * 0.12, r * 0.46)
+    ctx.moveTo(-r * 0.16, r * 0.56)
+    ctx.quadraticCurveTo(0, r * 0.44, r * 0.16, r * 0.56)
     ctx.stroke()
   }
 
-  if (look.glasses > 0.68) {
+  if (look.glasses > 0.55) {
     ctx.strokeStyle = ink
-    ctx.lineWidth = Math.max(1.6, r * 0.055)
+    ctx.lineWidth = Math.max(2, r * 0.06)
     ctx.beginPath()
-    ctx.ellipse(-r * 0.2, r * 0.08, r * 0.16, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.ellipse(-r * 0.18, r * 0.06, r * 0.155, r * 0.125, 0, 0, Math.PI * 2)
     ctx.stroke()
     ctx.beginPath()
-    ctx.ellipse(r * 0.2, r * 0.08, r * 0.16, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.ellipse(r * 0.18, r * 0.06, r * 0.155, r * 0.125, 0, 0, Math.PI * 2)
     ctx.stroke()
     ctx.beginPath()
-    ctx.moveTo(-r * 0.04, r * 0.07)
-    ctx.lineTo(r * 0.04, r * 0.07)
+    ctx.moveTo(-r * 0.025, r * 0.05)
+    ctx.lineTo(r * 0.025, r * 0.05)
     ctx.stroke()
     ctx.beginPath()
-    ctx.moveTo(-r * 0.36, r * 0.08)
-    ctx.lineTo(-r * 0.78, r * 0.14)
-    ctx.moveTo(r * 0.36, r * 0.08)
-    ctx.lineTo(r * 0.78, r * 0.14)
+    ctx.moveTo(-r * 0.335, r * 0.06)
+    ctx.lineTo(-r * 0.72, r * 0.12)
+    ctx.moveTo(r * 0.335, r * 0.06)
+    ctx.lineTo(r * 0.72, r * 0.12)
     ctx.stroke()
   }
 
@@ -382,37 +383,36 @@ function drawBubble(
   x: number,
   y: number,
   text: string,
-  r: number,
   angry: boolean,
   life: number,
   maxLife: number,
 ) {
   ctx.save()
-  const fade = angry ? 1 : Math.max(0, Math.min(1, life / Math.min(0.12, maxLife)))
+  const fade = angry ? 1 : Math.max(0, Math.min(1, life / Math.min(0.14, maxLife)))
   ctx.globalAlpha = fade
-  ctx.font = `800 ${Math.max(16, Math.min(22, r * 0.55))}px ui-sans-serif, system-ui, sans-serif`
+  ctx.font = angry
+    ? '800 22px ui-sans-serif, system-ui, sans-serif'
+    : '800 17px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  const padX = 12
-  const w = Math.max(72, ctx.measureText(text).width + padX * 2)
-  const h = Math.max(32, r * 0.7)
-  const bx = x
-  const by = y - r - h * 0.85
+  const padX = angry ? 16 : 12
+  const w = Math.max(angry ? 120 : 72, ctx.measureText(text).width + padX * 2)
+  const h = angry ? 40 : 32
   ctx.fillStyle = angry ? '#fff1e8' : '#fffaf0'
   ctx.strokeStyle = angry ? '#8a2018' : CRATE_INK
-  ctx.lineWidth = 3
-  roundRect(ctx, bx - w / 2, by - h / 2, w, h, 10)
+  ctx.lineWidth = angry ? 3.5 : 3
+  roundRect(ctx, x - w / 2, y - h / 2, w, h, 10)
   ctx.fill()
   ctx.stroke()
   ctx.beginPath()
-  ctx.moveTo(bx - 6, by + h / 2 - 1)
-  ctx.lineTo(bx, by + h / 2 + 8)
-  ctx.lineTo(bx + 8, by + h / 2 - 1)
+  ctx.moveTo(x - 6, y + h / 2 - 1)
+  ctx.lineTo(x, y + h / 2 + 8)
+  ctx.lineTo(x + 8, y + h / 2 - 1)
   ctx.closePath()
   ctx.fill()
   ctx.stroke()
   ctx.fillStyle = angry ? '#8a1810' : INK
-  ctx.fillText(text, bx, by + 1)
+  ctx.fillText(text, x, y + 1)
   ctx.restore()
 }
 
@@ -476,24 +476,25 @@ export function drawGame(view: CanvasApp, s: State, L: Layout, hoverId: number) 
   for (const u of popped) {
     drawOjisan(ctx, u, { angry: true, hover: false, time: s.time, pop: u.pop })
   }
+  drawHud(ctx, s, L)
   for (const f of s.floaters) {
     if (f.angry && f.follow >= 0) {
       const u = s.uncles[f.follow]
       const popT = easeOutBack(Math.min(1, u.pop))
-      drawBubble(
-        ctx,
-        u.x,
-        u.y - popT * u.r * 0.42,
-        f.text,
-        u.r * (1 + popT * 1.72),
-        true,
-        f.life,
-        f.maxLife,
-      )
+      const grow = 1 + popT * 1.72
+      const cx = u.x
+      const cy = u.y - popT * u.r * 0.42
+      const headTop = cy - u.r * grow * 0.95
+      let bx = cx
+      let by = headTop - 28
+      if (by < 52) {
+        bx = cx + u.r * grow * 0.85
+        by = cy - u.r * grow * 0.15
+      }
+      drawBubble(ctx, bx, by, f.text, true, f.life, f.maxLife)
     } else {
-      drawBubble(ctx, f.x, f.y, f.text, f.r, f.angry, f.life, f.maxLife)
+      drawBubble(ctx, f.x, f.y, f.text, false, f.life, f.maxLife)
     }
   }
-  drawHud(ctx, s, L)
   ctx.restore()
 }
