@@ -6,6 +6,7 @@ import {
   hitUncle,
   inBox,
   layout,
+  LOSE_BEAT,
   resetRound,
   tapUncle,
   tick,
@@ -26,7 +27,7 @@ const loop = createLoop((dt) => {
   const hover = hitUncle(state, input.pointer.x, input.pointer.y)
   if (input.pointer.pressed) {
     if (state.phase === 'over') {
-      if (state.overAge > 0.5 && inBox(L.box, input.pointer.x, input.pointer.y)) {
+      if (state.overAge > LOSE_BEAT && inBox(L.box, input.pointer.x, input.pointer.y)) {
         resetRound(state, L.box)
       }
     } else if (hover) {

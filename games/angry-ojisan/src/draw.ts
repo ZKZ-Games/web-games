@@ -1,8 +1,8 @@
 import type { CanvasApp } from '@web-games/kit'
 import {
-  ANGRY_YELL,
   FACE_COUNT,
   living,
+  LOSE_BEAT,
   traits,
   type Layout,
   type State,
@@ -145,155 +145,232 @@ export function drawCrate(ctx: CanvasRenderingContext2D, L: Layout, hot = false)
   ctx.restore()
 }
 
+function easeOutBack(t: number) {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
+}
+
+function pathHead(ctx: CanvasRenderingContext2D, r: number, jaw: number) {
+  const w = r * (1.76 + jaw * 0.1)
+  const h = r * 1.98
+  roundRect(ctx, -w / 2, -r * 0.88, w, h, r * 0.44)
+}
+
 export function drawOjisan(
   ctx: CanvasRenderingContext2D,
   u: Uncle,
-  opts: { angry: boolean; hover: boolean; time: number },
+  opts: { angry: boolean; hover: boolean; time: number; pop: number },
 ) {
   const look = traits(u.id)
   const r = u.r * look.scale
+  const popT = opts.pop > 0 ? easeOutBack(Math.min(1, opts.pop)) : 0
   const bob = u.live && !opts.angry ? Math.sin(opts.time * 2.4 + u.id) * r * 0.03 : 0
-  const madShake = opts.angry ? Math.sin(opts.time * 28) * r * 0.04 : 0
+  const madShake = opts.angry ? Math.sin(opts.time * 34) * r * (0.03 + popT * 0.08) : 0
+  const wobble = opts.angry ? Math.sin(opts.time * 29) * 0.055 * popT : 0
   ctx.save()
-  ctx.translate(u.x + madShake, u.y + bob)
-  ctx.rotate(u.angle + look.tilt)
+  ctx.translate(u.x + madShake, u.y + bob - popT * r * 0.42)
+  ctx.rotate(u.angle + look.tilt + wobble)
+  ctx.scale(1 + popT * 1.72, 1 + popT * 1.72)
   if (u.fly > 0) ctx.globalAlpha = Math.max(0, Math.min(1, u.fly / 0.2))
   if (opts.hover && u.live) {
     ctx.shadowColor = '#ffe7a8'
     ctx.shadowBlur = r * 0.55
+  } else if (popT > 0.04) {
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'
+    ctx.shadowBlur = r * 0.85 * popT
+    ctx.shadowOffsetY = r * 0.22 * popT
   }
 
   const skin = opts.angry
     ? '#e24b3a'
-    : mixRgb([244, 196, 160], [210, 150, 112], look.skin)
+    : mixRgb([236, 196, 168], [196, 148, 112], look.skin)
   const skinDeep = opts.angry
     ? '#b83228'
-    : mixRgb([212, 149, 110], [176, 118, 82], look.skin)
-  const hair = opts.angry ? '#1a0c08' : mixRgb([48, 30, 20], [28, 16, 12], look.hair)
+    : mixRgb([204, 148, 112], [168, 112, 80], look.skin)
+  const hair = opts.angry ? '#1a0c08' : mixRgb([42, 28, 20], [22, 14, 10], look.hair)
   const ink = opts.angry ? '#2a0808' : '#2a1810'
   const shirt = opts.angry ? '#7a1c1c' : mixRgb([61, 92, 122], [74, 98, 72], look.collar)
 
   ctx.fillStyle = shirt
   ctx.beginPath()
-  ctx.ellipse(0, r * 0.95, r * 0.72, r * 0.28, 0, 0, Math.PI * 2)
+  ctx.ellipse(0, r * 1.08, r * 0.78, r * 0.3, 0, 0, Math.PI * 2)
   ctx.fill()
   ctx.fillStyle = opts.angry ? '#f0e6d4' : '#f3ead8'
   ctx.beginPath()
-  ctx.moveTo(-r * 0.42, r * 0.72)
-  ctx.lineTo(-r * 0.18, r * 1.05)
-  ctx.lineTo(r * 0.18, r * 1.05)
-  ctx.lineTo(r * 0.42, r * 0.72)
+  ctx.moveTo(-r * 0.4, r * 0.82)
+  ctx.lineTo(-r * 0.16, r * 1.16)
+  ctx.lineTo(r * 0.16, r * 1.16)
+  ctx.lineTo(r * 0.4, r * 0.82)
   ctx.closePath()
   ctx.fill()
 
   ctx.fillStyle = skinDeep
   ctx.beginPath()
-  ctx.ellipse(-r * 0.78, r * 0.08, r * 0.18, r * 0.26, 0.1, 0, Math.PI * 2)
-  ctx.ellipse(r * 0.78, r * 0.08, r * 0.18, r * 0.26, -0.1, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.86, r * 0.12, r * 0.16, r * 0.24, 0.12, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.86, r * 0.12, r * 0.16, r * 0.24, -0.12, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.fillStyle = skin
-  ctx.beginPath()
-  ctx.arc(0, 0, r, 0, Math.PI * 2)
+  pathHead(ctx, r, look.jaw)
   ctx.fill()
+  if (popT > 0.04) {
+    ctx.shadowBlur = 0
+    ctx.shadowOffsetY = 0
+  }
   ctx.strokeStyle = skinDeep
-  ctx.lineWidth = Math.max(1.5, r * 0.06)
+  ctx.lineWidth = Math.max(1.5, r * 0.055)
   ctx.stroke()
 
-  const hairW = r * (0.26 + look.hair * 0.08)
-  const hairH = r * (0.52 + look.hair * 0.1)
+  const hairTop = -r * (0.12 + look.hair * 0.28)
+  const hairW = r * (0.24 + look.hair * 0.1)
+  ctx.save()
+  pathHead(ctx, r, look.jaw)
+  ctx.clip()
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.64, r * 0.1, hairW, hairH, 0.18, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.72, r * 0.18, hairW, r * (0.62 + look.hair * 0.12), 0.22, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.64, r * 0.1, hairW, hairH, -0.18, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.72, r * 0.18, hairW, r * (0.62 + look.hair * 0.12), -0.22, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(0, r * 0.58, r * 0.74, r * 0.3, 0, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.7, r * 0.88, r * 0.3, r * 0.22, 0, 0, Math.PI * 2)
   ctx.fill()
-
-  ctx.save()
   ctx.beginPath()
-  ctx.arc(0, 0, r, 0, Math.PI * 2)
-  ctx.clip()
-  ctx.fillStyle = 'rgba(255,255,255,0.28)'
+  ctx.ellipse(r * 0.7, r * 0.88, r * 0.3, r * 0.22, 0, 0, Math.PI * 2)
+  ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(-r * 0.16, -r * 0.38, r * 0.22, r * 0.1, -0.4, 0, Math.PI * 2)
+  ctx.moveTo(-r * 0.98, r * 0.2)
+  ctx.quadraticCurveTo(-r * 0.88, hairTop, -r * 0.52, hairTop + r * 0.08)
+  ctx.lineTo(-r * 0.48, r * 0.55)
+  ctx.lineTo(-r * 1.05, r * 0.55)
+  ctx.closePath()
+  ctx.fill()
+  ctx.beginPath()
+  ctx.moveTo(r * 0.98, r * 0.2)
+  ctx.quadraticCurveTo(r * 0.88, hairTop, r * 0.52, hairTop + r * 0.08)
+  ctx.lineTo(r * 0.48, r * 0.55)
+  ctx.lineTo(r * 1.05, r * 0.55)
+  ctx.closePath()
+  ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.22)'
+  ctx.beginPath()
+  ctx.ellipse(-r * 0.14, -r * 0.42, r * 0.2, r * 0.08, -0.35, 0, Math.PI * 2)
   ctx.fill()
   ctx.restore()
 
+  ctx.fillStyle = hair
+  ctx.beginPath()
+  ctx.ellipse(-r * 0.78, r * 0.28, r * 0.16, r * 0.28, 0.18, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(r * 0.78, r * 0.28, r * 0.16, r * 0.28, -0.18, 0, Math.PI * 2)
+  ctx.fill()
+
+  const browY = -r * (0.02 + look.brow * 0.03)
   ctx.strokeStyle = ink
+  ctx.fillStyle = ink
   ctx.lineCap = 'round'
-  ctx.lineWidth = Math.max(2, r * 0.1)
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(3.2, r * (0.13 + look.brow * 0.04))
   if (opts.angry) {
     ctx.beginPath()
-    ctx.moveTo(-r * 0.46, -r * 0.22)
-    ctx.lineTo(-r * 0.08, -r * 0.02)
-    ctx.moveTo(r * 0.46, -r * 0.22)
-    ctx.lineTo(r * 0.08, -r * 0.02)
+    ctx.moveTo(-r * 0.4, browY - r * 0.1)
+    ctx.lineTo(-r * 0.05, browY + r * 0.06)
+    ctx.moveTo(r * 0.4, browY - r * 0.1)
+    ctx.lineTo(r * 0.05, browY + r * 0.06)
     ctx.stroke()
   } else {
-    const browY = -r * (0.08 + look.brow * 0.05)
     ctx.beginPath()
-    ctx.moveTo(-r * 0.42, browY)
-    ctx.lineTo(-r * 0.08, -r * 0.02)
-    ctx.moveTo(r * 0.42, browY)
-    ctx.lineTo(r * 0.08, -r * 0.02)
+    ctx.moveTo(-r * 0.4, browY)
+    ctx.lineTo(-r * 0.06, browY + r * 0.05)
+    ctx.moveTo(r * 0.4, browY)
+    ctx.lineTo(r * 0.06, browY + r * 0.05)
     ctx.stroke()
   }
 
   ctx.fillStyle = ink
   if (opts.angry) {
     ctx.beginPath()
-    ctx.ellipse(-r * 0.26, r * 0.02, r * 0.12, r * 0.14, 0, 0, Math.PI * 2)
-    ctx.ellipse(r * 0.26, r * 0.02, r * 0.12, r * 0.14, 0, 0, Math.PI * 2)
+    ctx.ellipse(-r * 0.2, r * 0.08, r * 0.11, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.ellipse(r * 0.2, r * 0.08, r * 0.11, r * 0.13, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#fff6ea'
     ctx.beginPath()
-    ctx.ellipse(-r * 0.23, -r * 0.02, r * 0.045, r * 0.05, 0, 0, Math.PI * 2)
-    ctx.ellipse(r * 0.29, -r * 0.02, r * 0.045, r * 0.05, 0, 0, Math.PI * 2)
+    ctx.ellipse(-r * 0.17, r * 0.03, r * 0.04, r * 0.045, 0, 0, Math.PI * 2)
+    ctx.ellipse(r * 0.23, r * 0.03, r * 0.04, r * 0.045, 0, 0, Math.PI * 2)
     ctx.fill()
   } else {
     ctx.beginPath()
-    ctx.arc(-r * 0.26, r * 0.02, r * 0.075, 0, Math.PI * 2)
-    ctx.arc(r * 0.26, r * 0.02, r * 0.075, 0, Math.PI * 2)
+    ctx.arc(-r * 0.2, r * 0.08, r * 0.072, 0, Math.PI * 2)
+    ctx.arc(r * 0.2, r * 0.08, r * 0.072, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#fff8ee'
+    ctx.beginPath()
+    ctx.arc(-r * 0.175, r * 0.055, r * 0.022, 0, Math.PI * 2)
+    ctx.arc(r * 0.225, r * 0.055, r * 0.022, 0, Math.PI * 2)
     ctx.fill()
   }
 
   ctx.fillStyle = skinDeep
   ctx.beginPath()
-  ctx.moveTo(0, -r * 0.02)
-  ctx.lineTo(-r * 0.08, r * 0.2)
-  ctx.lineTo(r * 0.08, r * 0.2)
+  ctx.moveTo(0, r * 0.02)
+  ctx.lineTo(-r * 0.07, r * 0.2)
+  ctx.lineTo(r * 0.07, r * 0.2)
   ctx.closePath()
   ctx.fill()
 
-  const stacheW = r * (0.26 + look.stache * 0.08)
-  const stacheH = r * (0.11 + look.stache * 0.04)
+  const stacheW = r * (0.34 + look.stache * 0.08)
+  const stacheH = r * (0.14 + look.stache * 0.05)
   ctx.fillStyle = hair
   ctx.beginPath()
-  ctx.ellipse(-r * 0.24, r * 0.28, stacheW, stacheH, -0.28, 0, Math.PI * 2)
+  ctx.ellipse(-r * 0.3, r * 0.3, stacheW, stacheH, -0.22, 0, Math.PI * 2)
   ctx.fill()
   ctx.beginPath()
-  ctx.ellipse(r * 0.24, r * 0.28, stacheW, stacheH, 0.28, 0, Math.PI * 2)
+  ctx.ellipse(r * 0.3, r * 0.3, stacheW, stacheH, 0.22, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(0, r * 0.28, r * 0.2, r * 0.08, 0, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.strokeStyle = ink
-  ctx.lineWidth = Math.max(2, r * 0.09)
+  ctx.lineWidth = Math.max(2, r * 0.085)
   ctx.lineCap = 'round'
   if (opts.angry) {
     ctx.fillStyle = '#2a0808'
     ctx.beginPath()
-    ctx.ellipse(0, r * 0.52, r * 0.28, r * 0.22, 0, 0, Math.PI * 2)
+    ctx.ellipse(0, r * 0.52, r * 0.26, r * 0.2, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#f2d2c4'
     ctx.beginPath()
-    ctx.ellipse(0, r * 0.58, r * 0.18, r * 0.1, 0, 0, Math.PI * 2)
+    ctx.ellipse(0, r * 0.58, r * 0.16, r * 0.09, 0, 0, Math.PI * 2)
     ctx.fill()
   } else {
     ctx.beginPath()
-    ctx.arc(0, r * 0.48, r * 0.22, 0.15 * Math.PI, 0.85 * Math.PI)
+    ctx.moveTo(-r * 0.12, r * 0.46)
+    ctx.quadraticCurveTo(0, r * 0.54, r * 0.12, r * 0.46)
+    ctx.stroke()
+  }
+
+  if (look.glasses > 0.68) {
+    ctx.strokeStyle = ink
+    ctx.lineWidth = Math.max(1.6, r * 0.055)
+    ctx.beginPath()
+    ctx.ellipse(-r * 0.2, r * 0.08, r * 0.16, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.ellipse(r * 0.2, r * 0.08, r * 0.16, r * 0.13, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(-r * 0.04, r * 0.07)
+    ctx.lineTo(r * 0.04, r * 0.07)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(-r * 0.36, r * 0.08)
+    ctx.lineTo(-r * 0.78, r * 0.14)
+    ctx.moveTo(r * 0.36, r * 0.08)
+    ctx.lineTo(r * 0.78, r * 0.14)
     ctx.stroke()
   }
 
@@ -307,8 +384,12 @@ function drawBubble(
   text: string,
   r: number,
   angry: boolean,
+  life: number,
+  maxLife: number,
 ) {
   ctx.save()
+  const fade = angry ? 1 : Math.max(0, Math.min(1, life / Math.min(0.12, maxLife)))
+  ctx.globalAlpha = fade
   ctx.font = `800 ${Math.max(16, Math.min(22, r * 0.55))}px ui-sans-serif, system-ui, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -363,10 +444,8 @@ export function drawHud(ctx: CanvasRenderingContext2D, s: State, L: Layout) {
   ctx.font = '600 16px ui-sans-serif, system-ui, sans-serif'
   if (s.phase === 'play') {
     ctx.fillText("don't tap the angry one", L.width / 2, L.footY)
-  } else if (s.overAge > 0.5) {
+  } else if (s.overAge > LOSE_BEAT) {
     ctx.fillText('tap the box to play again', L.width / 2, L.footY)
-  } else {
-    ctx.fillText(ANGRY_YELL, L.width / 2, L.footY)
   }
   ctx.restore()
 }
@@ -379,20 +458,41 @@ export function drawGame(view: CanvasApp, s: State, L: Layout, hoverId: number) 
   ctx.translate(sx, sy)
   drawTable(ctx, L.width, L.height)
   drawCrate(ctx, L, s.phase === 'over')
+  const popping = (u: Uncle) => u.angry && s.phase === 'over'
   const flyers = s.uncles.filter((u) => u.fly > 0)
-  const seated = s.uncles.filter((u) => u.live)
+  const seated = s.uncles.filter((u) => u.live && !popping(u))
+  const popped = s.uncles.filter((u) => u.live && popping(u))
   for (const u of seated) {
     drawOjisan(ctx, u, {
-      angry: u.angry && s.phase === 'over',
+      angry: false,
       hover: hoverId === u.id && s.phase === 'play',
       time: s.time,
+      pop: 0,
     })
   }
   for (const u of flyers) {
-    drawOjisan(ctx, u, { angry: false, hover: false, time: s.time })
+    drawOjisan(ctx, u, { angry: false, hover: false, time: s.time, pop: 0 })
+  }
+  for (const u of popped) {
+    drawOjisan(ctx, u, { angry: true, hover: false, time: s.time, pop: u.pop })
   }
   for (const f of s.floaters) {
-    drawBubble(ctx, f.x, f.y, f.text, f.r, f.angry)
+    if (f.angry && f.follow >= 0) {
+      const u = s.uncles[f.follow]
+      const popT = easeOutBack(Math.min(1, u.pop))
+      drawBubble(
+        ctx,
+        u.x,
+        u.y - popT * u.r * 0.42,
+        f.text,
+        u.r * (1 + popT * 1.72),
+        true,
+        f.life,
+        f.maxLife,
+      )
+    } else {
+      drawBubble(ctx, f.x, f.y, f.text, f.r, f.angry, f.life, f.maxLife)
+    }
   }
   drawHud(ctx, s, L)
   ctx.restore()
