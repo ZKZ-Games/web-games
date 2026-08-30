@@ -1,6 +1,10 @@
 import { lerp } from '@web-games/kit'
 
 export const FACE_COUNT = 25
+export const SAFE_BUBBLE_LIFE = 0.4
+export const ANGRY_BUBBLE_LIFE = 1.8
+export const LOSE_BEAT = 0.72
+export const POP_SECS = 0.26
 
 export type Phase = 'play' | 'over'
 
@@ -23,15 +27,20 @@ export type Uncle = {
   vy: number
   spin: number
   angle: number
+  pop: number
 }
 
 export type Floater = {
   x: number
   y: number
+  vx: number
+  vy: number
   r: number
   text: string
   life: number
+  maxLife: number
   angry: boolean
+  follow: number
 }
 
 export type State = {
@@ -122,6 +131,7 @@ export function deal(s: State) {
       vy: 0,
       spin: 0,
       angle: 0,
+      pop: 0,
     })
   }
   s.phase = 'play'
@@ -143,6 +153,8 @@ export type Traits = {
   scale: number
   tilt: number
   collar: number
+  glasses: number
+  jaw: number
 }
 
 export function traits(id: number): Traits {
@@ -158,6 +170,8 @@ export function traits(id: number): Traits {
     scale: 0.93 + unit(5) * 0.1,
     tilt: (unit(6) - 0.5) * 0.12,
     collar: unit(7),
+    glasses: unit(8),
+    jaw: unit(9),
   }
 }
 
@@ -251,7 +265,19 @@ export function tapUncle(s: State, u: Uncle) {
     s.overAge = 0
     s.yell = 1
     s.shake = 1
-    s.floaters.push({ x: u.x, y: u.y, r: u.r, text: ANGRY_YELL, life: 2.4, angry: true })
+    u.pop = 0
+    s.floaters.push({
+      x: u.x,
+      y: u.y,
+      vx: 0,
+      vy: 0,
+      r: u.r,
+      text: ANGRY_YELL,
+      life: ANGRY_BUBBLE_LIFE,
+      maxLife: ANGRY_BUBBLE_LIFE,
+      angry: true,
+      follow: u.id,
+    })
     return
   }
   u.live = false
@@ -261,7 +287,18 @@ export function tapUncle(s: State, u: Uncle) {
   u.spin = (Math.random() - 0.5) * 12
   const line = pickLine(s.lastLine)
   s.lastLine = line
-  s.floaters.push({ x: u.x, y: u.y, r: u.r, text: line, life: 2.1, angry: false })
+  s.floaters.push({
+    x: u.x,
+    y: u.y - u.r * 1.55,
+    vx: u.vx,
+    vy: u.vy - 40,
+    r: u.r,
+    text: line,
+    life: SAFE_BUBBLE_LIFE,
+    maxLife: SAFE_BUBBLE_LIFE,
+    angry: false,
+    follow: -1,
+  })
 }
 
 export function resetRound(s: State, box: Box) {
@@ -290,7 +327,25 @@ export function tick(s: State, dt: number, box: Box) {
       u.cell = lerp(u.cell, u.tcell, ease)
       u.angle *= Math.max(0, 1 - dt * 8)
     }
+    if (u.angry && s.phase === 'over') {
+      u.pop = Math.min(1, u.pop + dt / POP_SECS)
+    }
   }
-  for (const f of s.floaters) f.life -= dt
+  for (const f of s.floaters) {
+    f.life -= dt
+    if (f.follow >= 0) {
+      const u = s.uncles[f.follow]
+      if (u) {
+        const grow = 1 + u.pop * 1.72
+        f.x = u.x
+        f.y = u.y - u.r * grow * 0.55
+        f.r = u.r * grow
+      }
+    } else {
+      f.x += f.vx * dt
+      f.y += f.vy * dt
+      f.vy += 980 * dt
+    }
+  }
   s.floaters = s.floaters.filter((f) => f.life > 0)
 }
